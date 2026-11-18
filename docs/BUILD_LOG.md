@@ -210,3 +210,70 @@ Facts confirmed from the package itself:
 So recorder output feeds straight into the bench.
 
 **Not done:** running the live SDK + gate during recording (§13.2, "if CPU allows"). It's optional, and it can't be tested here.
+
+---
+
+## 2026-11-18, ~20:40–22:30 WAT · Block 6: judge site + compliance lint
+
+**Credits used:** 0.
+
+**Built: `apps/web`**, a static judge site hosted on Vercel, as Greg chose. It uses the same design system as the app (Instrument Serif / Geist, mint/amber/coral/violet, dark and light themes).
+
+**Pages:**
+- **Overview:**
+  - hero with an animated clean-window illustration (labelled as an illustration);
+  - the headline numbers, rendered from `results.json` as TBD chips until then;
+  - click-to-load video cards;
+  - an interactive window explainer: drag a disturbance and watch which 12/30/60-s readings it contaminates, using the bench's own `CONTAMINATES` map;
+  - an expandable rules table with live thresholds from `gate.v1.json`;
+  - a receipt card;
+  - a bench-progress tracker.
+- **Replay Lab:** the real gate on labelled synthetic scenarios (and corpus traces once published), with a timeline of SDK-stable readings against Witness verdicts, condition bands, a receipt drawer, and a scrubber with play driving live rings and the coaching text. No aggregate counts are shown for synthetic data.
+- **Verify:**
+  - `verifyAll` in a Web Worker over the published corpus;
+  - a tamper playground with 6 ways to cheat, run on a labelled demo corpus;
+  - a check-in drop zone, plus a sample export.
+- **Results:** the protocol stepper and the fixed definitions. The tables render only from `results.json`.
+- **Run it:** four paths, with copy buttons.
+- **Consent & data:** the egress truth table (the AI auto-insight row is marked pending), the app's consent card text imported from the app's own strings file, the misuse-prevention design and the limitations.
+- **Flicker tool:** photosensitivity gate, 3 Hz cap, full-screen, wake lock.
+
+**Guided tour** (`src/tour`): 19 steps across all 7 pages.
+- A spotlight cut-out springs from target to target, with a pulsing ring and smooth scroll.
+- Click-blockers sit *around* the hole, so the highlighted control stays usable (a test drags and clicks during the tour).
+- Card placement goes below, then above, then beside the target, then docks at the bottom; mobile gets a bottom sheet.
+- Progress bar, Back/Next/Skip, ←/→/Enter/Esc, focus management.
+- A first-visit prompt (suppressed under automation), with the choice remembered.
+- Reduced motion turns the springs off.
+
+**Vercel:** `vercel.json` with a workspace-scoped install, SPA rewrites and strict security headers (`docs/DEPLOY.md`).
+- A plain `npm ci` would download the SDK's native packages for all platforms. The scoped install skips them, finishing in 6.5 s with no `@smartspectra` packages, and building cleanly from a fresh copy.
+- Deployment itself needs Greg: this container can't reach vercel.com.
+
+**Compliance lint** (`tools/compliance`, `npm run lint:compliance`, in CI): the §10.5 banned patterns with word boundaries, an allowlist for our fixed disclaimers, and scope limited to everything users and judges read. Current result: 0 hits.
+
+**Findings fixed during this block, from the tests:**
+- **Fonts under the CSP.** Vite inlined small font files as `data:` URIs, which `font-src 'self'` blocked, so fonts silently fell back. The site's CSP test caught it, and the desktop renderer had the same latent bug. `assetsInlineLimit: 0` is now set in all three Vite configs.
+- **Tour clicks.** The tour overlay's root layer swallowed clicks inside the spotlight.
+- **Mobile overflow.** `/verify` overflowed by 102 px on a 375-px screen, because grid items had `min-width: auto` around long commands and hashes.
+- **axe issues:**
+  - labels that didn't match the accessible names (tour button, video buttons);
+  - focusable dots nested inside `role="img"`;
+  - scrollable code blocks that weren't focusable;
+  - a fade that failed contrast mid-animation.
+
+**Measured (this block):**
+- `npx playwright test`: 23 pass, 13 site + 10 app. The site tests cover:
+  - all routes by deep link under the CSP, with 0 console errors and 0 third-party requests;
+  - TBD chips in the headline;
+  - the full 19-step tour across all 7 routes;
+  - Back/Esc and interaction during the tour;
+  - explainer keyboard;
+  - the Replay receipt drawer;
+  - verify honest (OK) and tampered (the failing `docs.README.md` check listed first);
+  - the sample check-in;
+  - the flicker gate;
+  - no horizontal scroll at 375 px;
+  - axe with 0 serious/critical in dark and light.
+- Compliance lint: 2 tests pass, with 0 hits in scope.
+- The tamper playground takes about 6 s in the browser to build and verify the demo corpus.

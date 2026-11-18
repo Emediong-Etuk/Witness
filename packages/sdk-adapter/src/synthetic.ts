@@ -24,6 +24,17 @@ export const SCENARIOS = {
 
 export type Scenario = keyof typeof SCENARIOS;
 
+/** Where each scenario's condition is, for drawing condition bands (matches the generator below). */
+export const SCENARIO_LABELS: Record<Scenario, { condition: string; fromS: number; toS: number | null }[]> = {
+  clean: [],
+  talking: [{ condition: 'talking', fromS: 35, toS: 50 }],
+  flicker72: [{ condition: 'flicker', fromS: 3, toS: null }],
+  multiple_faces: [{ condition: 'second_person', fromS: 25, toS: 28 }],
+  motion: [{ condition: 'motion', fromS: 20, toS: 23 }],
+  chewing: [{ condition: 'chewing', fromS: 10, toS: 32 }],
+  photo: [{ condition: 'photo', fromS: 0, toS: null }],
+};
+
 function rng(seed: number) {
   let a = seed >>> 0;
   return () => {

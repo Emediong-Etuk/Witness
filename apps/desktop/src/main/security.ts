@@ -22,7 +22,7 @@ export const CSP = [
 export const EXTERNAL: Record<string, string> = {
   register: 'https://physiology.presagetech.com/auth/register',
   portal: 'https://physiology.presagetech.com/',
-  repo: 'https://github.com/emediong-etuk/witness',
+  repo: 'https://github.com/Emediong-Etuk/Witness',
 };
 
 export function openExternal(id: string): boolean {

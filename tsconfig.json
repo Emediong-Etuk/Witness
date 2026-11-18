@@ -6,9 +6,14 @@
     "packages/*/config/*.json",
     "tools/*/src",
     "tools/*/test",
-    "apps/desktop/src","apps/desktop/test",
+    "apps/desktop/src",
+    "apps/desktop/test",
     "apps/desktop/*.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "apps/web/src",
+    "apps/web/*.config.ts",
+    "tools/compliance/*.ts",
+    "tools/compliance/test"
   ],
   "compilerOptions": {
     "jsx": "react-jsx",

@@ -1,0 +1,7 @@
+{
+  "name": "@witness/compliance",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Compliance lint: no diagnosis or treatment wording anywhere a user or judge reads it (BUILD_PROMPT §10.5)."
+}

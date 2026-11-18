@@ -10,5 +10,5 @@ export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
   worker: { format: 'es' },
-  build: { outDir: resolve(__dirname, 'dist-web'), emptyOutDir: true },
+  build: { outDir: resolve(__dirname, 'dist-web'), emptyOutDir: true, assetsInlineLimit: 0 },
 });

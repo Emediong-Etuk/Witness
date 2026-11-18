@@ -25,7 +25,8 @@ On our <!-- bench:clips.length|int -->TBD (run npm run bench:report)<!-- /bench 
 - `tools/bench`: record / replay / calibrate / report ✅ (no real clips yet; held-out report locked until thresholds are frozen)
 - `tools/verify` (`npm run verify`, `npx witness-verify corpus/`): recomputes every chain, receipt, result and embedded number ✅
 - `tools/lab-recorder` (`npm run lab`): consented corpus recording with scripted cues, flicker page ✅
-- Packaging, judge site: not started
+- `apps/web`: judge site with an animated guided tour, Replay Lab, in-browser Verify + tamper playground, results, flicker tool ✅ (deploy: `docs/DEPLOY.md`)
+- Packaging: not started
 
 Requires Node 24 (npm ≥ 11).
 

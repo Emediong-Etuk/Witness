@@ -16,6 +16,7 @@ export default defineConfig({
     root: resolve(__dirname, 'src/renderer'),
     plugins: [react(), tailwindcss()],
     worker: { format: 'es' },
-    build: { rollupOptions: { input: resolve(__dirname, 'src/renderer/index.html') } },
+    // assetsInlineLimit 0: fonts must be files under the CSP's font-src 'self'
+    build: { assetsInlineLimit: 0, rollupOptions: { input: resolve(__dirname, 'src/renderer/index.html') } },
   },
 });
