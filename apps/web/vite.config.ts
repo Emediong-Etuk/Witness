@@ -1,13 +1,14 @@
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { devInlineStyles } from '../../config/vite-dev-csp';
 import { defineConfig } from 'vite';
 
 const REPO = resolve(__dirname, '../..');
 
 export default defineConfig({
   root: __dirname,
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), devInlineStyles()],
   worker: { format: 'es' },
   // corpus/, bench/out/ and docs live outside this app and are bundled at build time
   server: { fs: { allow: [REPO] } },
