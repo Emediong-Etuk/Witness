@@ -277,3 +277,8 @@ So recorder output feeds straight into the bench.
   - axe with 0 serious/critical in dark and light.
 - Compliance lint: 2 tests pass, with 0 hits in scope.
 - The tamper playground takes about 6 s in the browser to build and verify the demo corpus.
+
+### First launch on Greg's machine (Windows): "Electron uninstall"
+- `npm run dev -w @witness/desktop` failed with `Error: Electron uninstall` from electron-vite's `getElectronPath`.
+- Cause: Electron 45 has no postinstall; its binary is fetched lazily by `install-electron` (or on first `require('electron')`), and electron-vite 6 only checks for `path.txt`, so it throws before anything downloads.
+- Fix: `"predev": "install-electron"` in `apps/desktop/package.json`, so `npm run dev` fetches the binary first (it exits at once if it's already there). Checked in the container: the download wrote `node_modules/electron/path.txt` and `dist/`.
