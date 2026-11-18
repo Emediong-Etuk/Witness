@@ -15,8 +15,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # apt's man-db index rebuild stalls on ubuntu-24.04 runners; both ffmpeg and
-      # `playwright install --with-deps` use apt, so switch it off before either.
+      # Skip apt's man-db index rebuild (slow on these runners) before any apt use.
       - name: Disable man-db auto-update
         run: sudo rm -f /var/lib/man-db/auto-update
       - name: Install ffmpeg (bench + lab-recorder tests)
@@ -28,11 +27,21 @@ jobs:
           sudo apt-get -o Acquire::Retries=3 update
           sudo apt-get -o Acquire::Retries=3 install -y --no-install-recommends ffmpeg
           ffmpeg -version | head -1
+      # The runner image already has Chrome's system libraries, so install only the browser.
+      # `--with-deps` pulls ~32 MB of optional fonts through apt, and the Ubuntu mirror is
+      # sometimes so slow on these runners that it alone exceeded 8 minutes. apt is now only a
+      # fallback, used if a smoke launch shows a library is actually missing.
       - name: Install Chromium for Playwright
         timeout-minutes: 8
         env:
           DEBIAN_FRONTEND: noninteractive
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install chromium
+          if ! node -e "require('@playwright/test').chromium.launch().then(b => b.close())"; then
+            echo "Chromium could not start; installing its system dependencies via apt"
+            sudo -E npx playwright install-deps chromium
+            node -e "require('@playwright/test').chromium.launch().then(b => b.close())"
+          fi
       - run: npm run typecheck
       - run: npm run test:coverage
       - run: npm run verify
@@ -49,15 +58,24 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # apt's man-db index rebuild stalls on ubuntu-24.04 runners; both ffmpeg and
-      # `playwright install --with-deps` use apt, so switch it off before either.
+      # Skip apt's man-db index rebuild (slow on these runners) before any apt use.
       - name: Disable man-db auto-update
         run: sudo rm -f /var/lib/man-db/auto-update
+      # The runner image already has Chrome's system libraries, so install only the browser.
+      # `--with-deps` pulls ~32 MB of optional fonts through apt, and the Ubuntu mirror is
+      # sometimes so slow on these runners that it alone exceeded 8 minutes. apt is now only a
+      # fallback, used if a smoke launch shows a library is actually missing.
       - name: Install Chromium for Playwright
         timeout-minutes: 8
         env:
           DEBIAN_FRONTEND: noninteractive
-        run: npx playwright install --with-deps chromium
+        run: |
+          npx playwright install chromium
+          if ! node -e "require('@playwright/test').chromium.launch().then(b => b.close())"; then
+            echo "Chromium could not start; installing its system dependencies via apt"
+            sudo -E npx playwright install-deps chromium
+            node -e "require('@playwright/test').chromium.launch().then(b => b.close())"
+          fi
       - run: npm run build:web
       - run: npm run build:site
       - run: npx playwright test --trace off
