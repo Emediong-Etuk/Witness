@@ -73,6 +73,7 @@ export function verifyAll(inp: VerifyInput): VerifyReport {
 
   // ---- traces + receipts
   const decoded: ClipTrace[] = [];
+  const replays = new Map<string, ReturnType<typeof replayTrace>>();
   const listed = new Set(manifest?.clips.map((c) => c.id) ?? []);
   for (const id of Object.keys(inp.traces).sort()) if (!listed.has(id)) add(`trace.${id}`, 'fail', 'trace for a clip that is not in the manifest');
   const clips = manifest?.clips ?? [];
@@ -108,6 +109,7 @@ export function verifyAll(inp: VerifyInput): VerifyReport {
     // receipts
     const rtext = inp.receipts[clip.id];
     const rep = replayTrace(t.lines, inp.gateConfig);
+    replays.set(clip.id, rep);
     counts.receipts += rep.receipts.length;
     if (rtext === undefined) {
       add(`receipts.${clip.id}`, 'fail', 'no stored receipts (run npm run bench:replay -- --write)');
@@ -152,7 +154,7 @@ export function verifyAll(inp: VerifyInput): VerifyReport {
       if (!results.freeze?.frozen) p.push(`thresholds were not frozen (${results.freeze?.reason ?? '?'})`);
       if (results.gate?.configHash !== cfgHash) p.push(`results use gate config ${results.gate?.configHash}, current is ${cfgHash}`);
       const held = decoded.filter((d) => d.clip.split === 'heldout');
-      const re = buildReport({ traces: held, cfg: inp.gateConfig, freeze: results.freeze, gitHead: results.gitHead });
+      const re = buildReport({ traces: held, cfg: inp.gateConfig, freeze: results.freeze, gitHead: results.gitHead, replays });
       const d = firstDiff(results, re);
       if (d) p.push(`recomputed results differ at ${d}`);
       add('results', p.length ? 'fail' : 'pass', p.length ? p.join('; ') : `recomputed from ${held.length} held-out traces and matched`);

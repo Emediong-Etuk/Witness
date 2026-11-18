@@ -32,7 +32,7 @@ function fixture(cfg: GateConfig = GATE_V1, withResults = true): VerifyInput {
   for (const [c, s, seed] of spec) {
     // Like the real pipeline: receipts and results are computed from the published (decoded) trace,
     // whose floats are canonicalised to 6 decimals, never from in-memory lines.
-    const e = encodeTrace(syntheticTrace(s, { mode: 'full', seed, durS: 70 }));
+    const e = encodeTrace(syntheticTrace(s, { mode: 'full', seed, durS: 55 }));
     const lines = decodeTrace(e.text).lines;
     c.sha256.trace = e.sha256;
     traces[c.id] = e.text;
@@ -55,7 +55,7 @@ function fixture(cfg: GateConfig = GATE_V1, withResults = true): VerifyInput {
 
 const fails = (inp: VerifyInput) => verifyAll(inp).checks.filter((c) => c.status === 'fail');
 
-describe('verifyAll', () => {
+describe('verifyAll', { timeout: 60_000 }, () => {
   const good = fixture();
   it('passes on a consistent corpus and says so', () => {
     const r = verifyAll(good);

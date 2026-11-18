@@ -2,7 +2,7 @@ import { configHash, type GateConfig, type Metric, type Receipt, type RuleId } f
 import type { Condition, ManifestClip } from '@witness/schema';
 import type { TraceLine } from '@witness/sdk-adapter';
 import { isContaminated } from './contamination.js';
-import { replayTrace } from './replay.js';
+import { replayTrace, type Replayed } from './replay.js';
 import { clusterBootstrap, mae, mean, quantile, round, share, type Ci } from './stats.js';
 
 export interface ClipTrace {
@@ -73,12 +73,14 @@ export interface ReportInput {
   cfg: GateConfig;
   freeze: FreezeStatus;
   gitHead: string | null;
+  /** Replays already computed with the same cfg (clipId → replay), to avoid replaying twice. */
+  replays?: Map<string, Replayed>;
 }
 
-export function buildReport({ traces, cfg, freeze, gitHead }: ReportInput) {
+export function buildReport({ traces, cfg, freeze, gitHead, replays }: ReportInput) {
   const held = traces.filter((t) => t.clip.split === 'heldout');
   if (traces.some((t) => t.clip.split !== 'heldout')) throw new Error('report must only see the held-out split');
-  const perClip = held.map((t) => ({ t, rep: replayTrace(t.lines, cfg) }));
+  const perClip = held.map((t) => ({ t, rep: replays?.get(t.clip.id) ?? replayTrace(t.lines, cfg) }));
   const rows: Row[] = [];
   for (const { t, rep } of perClip) {
     for (const r of rep.receipts) {
