@@ -7,6 +7,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -14,7 +15,17 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install ffmpeg (bench + lab-recorder tests)
+        timeout-minutes: 8
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then ffmpeg -version | head -1; exit 0; fi
+          # The man-db index rebuild after apt installs can stall for a long time on ubuntu-24.04 runners.
+          sudo rm -f /var/lib/man-db/auto-update
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 install -y --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
       - run: npx playwright install --with-deps chromium
       - run: npm run typecheck
       - run: npm run test:coverage
@@ -24,6 +35,7 @@ jobs:
       - run: npm run build:desktop
   ui:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
