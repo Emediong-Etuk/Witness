@@ -1,0 +1,12 @@
+{
+  "name": "@witness/egress-audit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DEV-ONLY: measures what leaves the computer during a session (socket table sampling + logging CONNECT proxy). Writes bench/out/egress and docs/EGRESS.md.",
+  "dependencies": {
+    "@smartspectra/node-sdk": "3.5.0",
+    "@witness/sdk-adapter": "1.0.0",
+    "@witness/schema": "1.0.0"
+  }
+}

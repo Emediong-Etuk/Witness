@@ -1,7 +1,7 @@
 // Feature worker: reads only small regions of each camera frame, turns them
 // into a few luminance numbers, and closes the frame immediately. No pixels,
 // images or landmark coordinates leave this worker.
-import { cornerRois, luma, rectsOverlap, type Rect } from '@witness/features';
+import { luma, roiLayout, type Rect } from '@witness/features';
 
 interface FaceBox { x: number; y: number; w: number; h: number }
 type In =
@@ -30,19 +30,8 @@ function meanLuma(img: ImageData, r: Rect): number | null {
   return n ? s / n : null;
 }
 
-function layout(): { bg: [Rect, Rect]; chest: Rect | null; face: Rect | null; roi: string } {
-  let [a, b] = cornerRois(W, H);
-  let roi = 'corners';
-  const fb = face ? { x: face.x * W, y: face.y * H, w: face.w * W, h: face.h * H } : null;
-  if (fb && (rectsOverlap(a, fb) || rectsOverlap(b, fb))) {
-    a = { x: 0, y: H * 0.3, w: W * 0.08, h: H * 0.4 };
-    b = { x: W * 0.92, y: H * 0.3, w: W * 0.08, h: H * 0.4 };
-    roi = 'side-bands';
-  }
-  // face box here is the 1.6× expanded box; derive chest and forehead/cheek patches from it
-  const chest = fb ? { x: fb.x + fb.w * 0.25, y: fb.y + fb.h * 0.95, w: fb.w * 0.5, h: fb.h * 0.25 } : null;
-  const fc = fb ? { x: fb.x + fb.w * 0.38, y: fb.y + fb.h * 0.3, w: fb.w * 0.24, h: fb.h * 0.12 } : null;
-  return { bg: [a, b], chest, face: fc, roi };
+function layout() {
+  return roiLayout(W, H, face);
 }
 
 async function pump(readable: ReadableStream<VideoFrame>): Promise<void> {
@@ -65,6 +54,7 @@ async function pump(readable: ReadableStream<VideoFrame>): Promise<void> {
     const img = ctx!.getImageData(0, 0, W, H);
     const L = layout();
     const bgA = meanLuma(img, L.bg[0]) ?? 0;
+    const roiKind = L.kind;
     const bgB = meanLuma(img, L.bg[1]) ?? 0;
     const msg = {
       type: 'frame' as const,
@@ -74,9 +64,9 @@ async function pump(readable: ReadableStream<VideoFrame>): Promise<void> {
       chest: L.chest ? meanLuma(img, L.chest) : null,
       face: L.face ? meanLuma(img, L.face) : null,
       workMs: performance.now() - t0,
-      roi: L.roi !== lastRoi ? L.roi : undefined,
+      roi: roiKind !== lastRoi ? roiKind : undefined,
     };
-    lastRoi = L.roi;
+    lastRoi = roiKind;
     (self as unknown as Worker).postMessage(msg);
   }
   reader.releaseLock();

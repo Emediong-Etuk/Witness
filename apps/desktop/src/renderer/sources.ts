@@ -1,4 +1,4 @@
-import { faceBox, OffsetEstimator, type Point } from '@witness/features';
+import { faceBox, normaliseBox, OffsetEstimator, type Point } from '@witness/features';
 import {
   RealSmartSpectra, requestedMetrics, type RendererSdkLike, syntheticTrace, TraceReplaySdk, type Scenario, type SourceEvent, type VitalsSource,
 } from '@witness/sdk-adapter';
@@ -57,9 +57,7 @@ class CameraSource implements VitalsSource {
     const b = faceBox(pts, 1.6);
     if (!b) return;
     // Landmarks may be normalised or in pixels; the worker wants normalised.
-    const vw = this.videoSize?.w ?? 1280, vh = this.videoSize?.h ?? 720;
-    const norm = Math.max(b.x + b.w, b.y + b.h) <= 1.6;
-    const box = norm ? b : { x: b.x / vw, y: b.y / vh, w: b.w / vw, h: b.h / vh };
+    const box = normaliseBox(b, this.videoSize?.w ?? 1280, this.videoSize?.h ?? 720);
     this.worker.postMessage({ type: 'face', box });
   }
 

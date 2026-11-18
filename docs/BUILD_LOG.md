@@ -85,3 +85,52 @@ Facts confirmed from the package itself:
 - `npm audit --omit=dev`: 0 vulnerabilities. Dev-only: `picomatch` ReDoS advisory (GHSA-fc5q-39xc-vjpf, all versions, no fix available), pulled in by build tooling. Documented exception.
 
 **Not done yet / next:** first Electron launch + `m1-sdk-hello` on Greg's machine; egress audit; bench record/replay/calibrate; verify CLI; packaging, fuses, release; judge site.
+
+---
+
+## 2026-11-18, ~17:40–18:40 WAT · Block 3: egress audit + bench pipeline
+
+**Credits used:** 0. Nothing has run against the real SDK. Every pipeline was exercised with a stub SDK, ffmpeg-generated test clips, local sockets and labelled synthetic traces.
+
+**Built:**
+- **`tools/egress-audit`**:
+  - socket-table sampler over the whole process tree (`ss` → `lsof` → `Get-NetTCPConnection`);
+  - logging CONNECT proxy (host:port only, never headers, so the key can't leak into a log);
+  - `runAudit` (spawn or attach);
+  - headless SDK `probe` (refuses without `--i-am-the-subject`; reads the key from env or `.env`; stores insight counts, ids and byte sizes, never text);
+  - `matrix` (the five §7.6/§13.7 configurations, fixed up front);
+  - `report`, which writes `docs/EGRESS.md` between markers.
+- **`tools/bench`**:
+  - `record`: consent-gated by the manifest, feeds frames at or below real time with the clip's own timestamps, records the timestamp passthrough check, uses the same `roiLayout` as the worker (now shared in `packages/features`), writes hash-chained traces;
+  - `replay`;
+  - `calibrate`: calibration split only, p99 × 1.5 method fixed in code, FAR/FRR curves;
+  - `report`: held-out only, with the definitions fixed in `DEFINITIONS`, clip-level cluster-bootstrap CIs, accuracy vs ground truth, per-rule attribution, time to first verified value, coverage and the flicker hero metric. It refuses to run unless `m4-thresholds-frozen` exists, is an ancestor of HEAD, and the config is unchanged since the tag.
+- **Manifest schema:** condition labels, intervals, flicker rate, paced breathing rate, consent with a `publishVideo` flag, and the clip file. `corpus/README.md` holds the clip plan.
+
+**Decisions:**
+- **Contamination definition fixed now** (`CONTAMINATES` in `tools/bench/src/manifest.ts`), from the model-card "does not work when" lists:
+  - talking → breathing;
+  - chewing → pulse and HRV;
+  - motion → all metrics;
+  - flicker, TV light, generator light → pulse and HRV;
+  - dark clothing → breathing.
+  - Photo and second person contaminate everything. They aren't model-card conditions, but the reading can't be the user's.
+- **CIs resample whole clips, not readings.** Readings taken 1 s apart share most of their window.
+- **The egress probe uses the main-process SDK.** `bindSmartSpectraIpc` always registers an insight sink, so §7.6 test (b) ("no listener") is only meaningful in the headless path. The app itself is audited separately with `attach`.
+
+**Measured (this block):**
+- `npx vitest run`: 128 tests pass (bench 10, egress 11 new).
+- On the stub-SDK record test (4 s, 120-frame ffmpeg clip):
+  - 120/120 frames were sent with strictly increasing timestamps;
+  - passthrough check = 1 (by construction of the stub);
+  - the trace holds 120 frame, 120 validation and 120 face_feature events;
+  - no coordinates appear in the trace text.
+- The real `lsof` sampler saw a child process's held-open TCP connection, sampled every 200 ms.
+
+**Credit estimates for the real runs** (from the clip plan; actual minutes will come from `bench:estimate` on Greg's clips):
+- ★ set of 9 clips × ~75 s ≈ 11 min of video;
+- full plan of 26 clips ≈ 33 min;
+- egress matrix ≈ 15 min;
+- SDK reproducibility (2 clips × 3 runs) ≈ 7.5 min;
+- total for everything ≈ 55–65 min.
+- **ASK GREG:** check remaining credits (portal or MCP `usage.get_plan`) before any of these runs. Anything over 25% of what's left needs his OK.

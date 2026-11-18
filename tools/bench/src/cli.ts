@@ -1,0 +1,146 @@
+#!/usr/bin/env node
+// Witness bench CLI (dev-only). `record` spends Presage credits; everything else is offline.
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { GATE_V1, type GateConfig } from '@witness/gate';
+import { ManifestSchema, type Manifest } from '@witness/schema';
+import { calibrate, type ClipTrace } from './calibrate.js';
+import { probe } from './ffmpeg.js';
+import { freezeStatus } from './git.js';
+import { consentedClip, loadManifest } from './manifest.js';
+import { defaultPaths, REPO } from './paths.js';
+import { recordClip } from './record.js';
+import { buildReport, renderTables } from './report.js';
+import { replayTrace } from './replay.js';
+import { apiKeyFromEnv, realSdk } from './sdk-node.js';
+import { readTrace } from './trace-io.js';
+
+const P = defaultPaths();
+const argv = process.argv.slice(2);
+const cmd = argv[0];
+const flag = (n: string) => argv.includes(`--${n}`);
+const opt = (n: string) => {
+  const i = argv.indexOf(`--${n}`);
+  return i >= 0 ? argv[i + 1] : undefined;
+};
+
+function loadConfig(): GateConfig {
+  const f = opt('config');
+  return f ? (JSON.parse(readFileSync(f, 'utf8')) as GateConfig) : GATE_V1;
+}
+
+export function loadTraces(m: Manifest, tracesDir: string, split: 'calibration' | 'heldout'): ClipTrace[] {
+  const out: ClipTrace[] = [];
+  for (const clip of m.clips.filter((c) => c.split === split)) {
+    const f = join(tracesDir, `${clip.id}.jsonl`);
+    if (!existsSync(f)) {
+      console.warn(`  ! ${clip.id}: no trace yet (${relative(REPO, f)})`);
+      continue;
+    }
+    const t = readTrace(f);
+    if (clip.sha256.trace && clip.sha256.trace !== t.sha256) throw new Error(`${clip.id}: trace hash ${t.sha256} does not match manifest ${clip.sha256.trace}`);
+    out.push({ clip, lines: t.lines, traceSha256: t.sha256 });
+  }
+  return out;
+}
+
+function gitHead(): string | null {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: REPO }).toString().trim();
+  } catch {
+    return null;
+  }
+}
+
+async function main() {
+  const m = loadManifest(P.manifest);
+  switch (cmd) {
+    case 'estimate':
+    case 'record': {
+      const ids = flag('all') ? m.clips.map((c) => c.id) : (opt('clip') ?? '').split(',').filter(Boolean);
+      if (!ids.length) throw new Error('usage: bench record --clip B1[,T1] | --all  [--speed 1] [--yes]');
+      const clips = ids.map((id) => consentedClip(m, id));
+      let totalS = 0;
+      for (const c of clips) {
+        const pr = probe(join(P.clips, c.file));
+        const d = (pr.ptsS.at(-1) ?? 0) - (pr.ptsS[0] ?? 0);
+        totalS += d;
+        console.log(`  ${c.id}  ${c.condition.padEnd(16)} ${d.toFixed(1)} s  ${pr.width}x${pr.height}`);
+      }
+      console.log(`Estimated SDK time: ${(totalS / 60).toFixed(2)} min of video (credits are metered by Presage; check usage before and after).`);
+      if (cmd === 'estimate') return;
+      if (!flag('yes')) {
+        console.log('Not recording: re-run with --yes after checking remaining credits (BUILD_PROMPT rule 0.3).');
+        process.exitCode = 2;
+        return;
+      }
+      const key = apiKeyFromEnv(REPO);
+      if (!key) throw new Error('No SMARTSPECTRA_API_KEY in the environment or .env');
+      const speed = Number(opt('speed') ?? '1');
+      if (!(speed > 0 && speed <= 1)) throw new Error('--speed must be in (0, 1]: frames are fed at or below real time');
+      for (const c of clips) {
+        const r = await recordClip({
+          clip: c, clipsDir: P.clips, tracesDir: P.traces, apiKey: key, createSdk: realSdk, speed,
+          mode: (opt('mode') as 'quick' | 'full') ?? 'full', creditsBefore: opt('credits-before'), creditsAfter: opt('credits-after'),
+          log: (s) => console.log(`  ${s}`),
+        });
+        c.sha256.clip = r.meta.clipSha256 as string;
+        c.sha256.trace = r.sha256;
+        console.log(`  ${c.id}: frames ${r.meta.framesSent}, dropped ${r.meta.framesDropped}, passthrough ${r.meta.tsPassthrough}, wall ${r.meta.wallS}s`);
+      }
+      writeFileSync(P.manifest, JSON.stringify(ManifestSchema.parse(m), null, 2) + '\n');
+      return;
+    }
+    case 'replay': {
+      const cfg = loadConfig();
+      const out: Record<string, unknown>[] = [];
+      for (const split of ['calibration', 'heldout'] as const) {
+        for (const t of loadTraces(m, P.traces, split)) {
+          const rep = replayTrace(t.lines, cfg);
+          const v = (k: string) => rep.receipts.filter((r) => r.verdict === k).length;
+          out.push({ id: t.clip.id, split, receipts: rep.receipts.length, verified: v('VERIFIED'), withheld: v('WITHHELD'), warming: v('WARMING_UP'), outOfRange: v('OUT_OF_RANGE'), chainHead: rep.chainHead });
+        }
+      }
+      console.table(out);
+      return;
+    }
+    case 'calibrate': {
+      const traces = loadTraces(m, P.traces, 'calibration');
+      if (!traces.length) throw new Error('no calibration-split traces');
+      const res = calibrate(traces, loadConfig());
+      mkdirSync(P.out, { recursive: true });
+      writeFileSync(join(P.out, 'calibration.json'), JSON.stringify({ stats: res.stats, curves: res.curves, uncalibrated: res.uncalibratedKeys, config: res.config }, null, 2) + '\n');
+      console.table(res.stats);
+      for (const u of res.uncalibratedKeys) console.log(`  ! not calibrated: ${u.key} (${u.reason})`);
+      if (flag('write')) {
+        writeFileSync(P.gateConfig, JSON.stringify(res.config, null, 2) + '\n');
+        console.log(`Wrote ${relative(REPO, P.gateConfig)}. Commit it, then: git tag m4-thresholds-frozen`);
+      } else console.log('Dry run. Re-run with --write to update the gate config.');
+      return;
+    }
+    case 'report': {
+      const freeze = freezeStatus(REPO);
+      const unfrozen = flag('unfrozen');
+      if (!freeze.frozen && !unfrozen) throw new Error(`thresholds are not frozen: ${freeze.reason}. Refusing to run the held-out report (use --unfrozen for a labelled dry run).`);
+      const traces = loadTraces(m, P.traces, 'heldout');
+      if (!traces.length) throw new Error('no held-out traces');
+      const results = buildReport({ traces, cfg: loadConfig(), freeze, gitHead: gitHead() });
+      const dir = unfrozen && !freeze.frozen ? join(P.out, 'unfrozen') : P.out;
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'results.json'), JSON.stringify(results, null, 2) + '\n');
+      writeFileSync(join(dir, 'tables.md'), renderTables(results));
+      console.log(renderTables(results));
+      console.log(`Wrote ${relative(REPO, join(dir, 'results.json'))}`);
+      return;
+    }
+    default:
+      console.log('usage: bench <estimate|record|replay|calibrate|report> [options]');
+      process.exitCode = 1;
+  }
+}
+
+main().catch((e: Error) => {
+  console.error(`bench: ${e.message}`);
+  process.exitCode = 1;
+});

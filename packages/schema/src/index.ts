@@ -77,29 +77,52 @@ export const SessionLogLineSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('session_end'), ...lineBase, chainHead: hash, receiptChainHead: hash }).strict(),
 ]);
 
+export const ConditionSchema = z.enum([
+  'baseline', 'talking', 'chewing', 'motion', 'flicker', 'tv_light', 'generator_light', 'photo',
+  'second_person', 'paced_breathing', 'exercise', 'low_light', 'dark_clothing',
+]);
+export type Condition = z.infer<typeof ConditionSchema>;
+
 export const ManifestClipSchema = z.object({
   id: z.string().regex(/^[A-Z][0-9]+$/),
-  condition: z.string(),
+  title: z.string().max(120),
+  /** Primary condition of the clip (BUILD_PROMPT §13.2 plan). */
+  condition: ConditionSchema,
   split: z.enum(['calibration', 'heldout']),
-  intervals: z.array(z.object({ label: z.string(), fromS: z.number(), toS: z.number() })),
+  /** Path relative to corpus/clips/. Clips are gitignored; their SHA-256 is committed. */
+  file: z.string().regex(/^[A-Za-z0-9_.-]+$/),
+  /** Labelled condition intervals (from the lab recorder's scripted cues). */
+  intervals: z.array(z.object({ condition: ConditionSchema, fromS: z.number().nonnegative(), toS: z.number().positive() }).strict()),
+  /** True when the whole clip is the condition (e.g. TV light, printed photo). */
   wholeClip: z.boolean(),
+  flickerHz: z.number().positive().max(3).optional(),
+  pacedBreathingBrpm: z.number().positive().max(40).optional(),
   groundTruth: z.object({
-    device: z.string(),
-    pulse: z.array(z.object({ tS: z.number(), bpm: z.number() })),
-    breathing: z.array(z.object({ tS: z.number(), brpm: z.number() })).optional(),
-  }).nullable(),
-  consent: z.object({ attested: z.literal(true), subject: z.string(), at: z.string() }),
-  subject: z.object({ fitzpatrick: z.number().int().min(1).max(6).nullable() }),
-  camera: z.string(),
-  lighting: z.string(),
-  resolution: z.string(),
-  sha256: z.object({ clip: hash.nullable(), trace: hash.nullable() }),
+    device: z.string().max(120),
+    pulse: z.array(z.object({ tS: z.number(), bpm: z.number().positive() }).strict()),
+    breathing: z.array(z.object({ tS: z.number(), brpm: z.number().positive() }).strict()).optional(),
+  }).strict().nullable(),
+  consent: z.object({
+    attested: z.literal(true),
+    /** Subject label, not a full name (e.g. "S1"). */
+    subject: z.string().regex(/^S[0-9]+$/),
+    at: z.string().datetime(),
+    publishVideo: z.boolean(),
+  }).strict(),
+  subject: z.object({ fitzpatrick: z.number().int().min(1).max(6).nullable() }).strict(),
+  camera: z.string().max(120),
+  lighting: z.string().max(200),
+  resolution: z.string().regex(/^[0-9]+x[0-9]+$/),
+  notes: z.string().max(500).optional(),
+  sha256: z.object({ clip: hash.nullable(), trace: hash.nullable() }).strict(),
 }).strict();
 
 export const ManifestSchema = z.object({
   v: z.literal(1),
   clips: z.array(ManifestClipSchema),
 }).strict();
+
+export type ManifestClip = z.infer<typeof ManifestClipSchema>;
 
 export type GateEventInput = z.infer<typeof GateEventSchema>;
 export type ReceiptInput = z.infer<typeof ReceiptSchema>;

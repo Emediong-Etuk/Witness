@@ -13,7 +13,9 @@ General wellness information, not medical advice.
 - `packages/schema`: zod schemas for events, receipts, session logs and the manifest ✅
 - `packages/sdk-adapter`, `packages/session`, `packages/ui`: source adapter, replay, controller, design system ✅
 - `apps/desktop`: Electron shell + renderer ✅ (built; first real camera run pending)
-- Bench, verify CLI, packaging, judge site: not started
+- `tools/egress-audit`: socket sampler + logging proxy + headless SDK probe ✅ (no real runs yet)
+- `tools/bench`: record / replay / calibrate / report ✅ (no real clips yet; held-out report locked until thresholds are frozen)
+- Verify CLI, lab recorder, packaging, judge site: not started
 
 Requires Node 24 (npm ≥ 11).
 

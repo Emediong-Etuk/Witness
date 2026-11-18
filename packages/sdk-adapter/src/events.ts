@@ -26,6 +26,8 @@ export interface TraceHeader {
   sdkVersion: string;
   mode: 'quick' | 'full';
   note?: string;
+  /** Recording metadata (bench): clip hash, frames sent/dropped, timestamp passthrough check… */
+  meta?: Record<string, unknown>;
 }
 
 export type TraceLine = TraceHeader | SourceEvent;

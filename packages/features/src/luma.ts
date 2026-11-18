@@ -62,3 +62,36 @@ export function cornerRois(width: number, height: number): [Rect, Rect] {
 export function rectsOverlap(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
+
+export interface RoiLayout {
+  bg: [Rect, Rect];
+  chest: Rect | null;
+  face: Rect | null;
+  /** Which background layout was used ("corners" or "side-bands"); logged per session. */
+  kind: 'corners' | 'side-bands';
+}
+
+/**
+ * ROI layout shared by the live feature worker and the bench, so both paths
+ * measure the same regions. `faceBoxNorm` is the 1.6×-expanded face box in
+ * normalised [0,1] frame coordinates (or null before landmarks arrive).
+ */
+export function roiLayout(width: number, height: number, faceBoxNorm: Rect | null): RoiLayout {
+  let [a, b] = cornerRois(width, height);
+  let kind: RoiLayout['kind'] = 'corners';
+  const fb = faceBoxNorm ? { x: faceBoxNorm.x * width, y: faceBoxNorm.y * height, w: faceBoxNorm.w * width, h: faceBoxNorm.h * height } : null;
+  if (fb && (rectsOverlap(a, fb) || rectsOverlap(b, fb))) {
+    a = { x: 0, y: height * 0.3, w: width * 0.08, h: height * 0.4 };
+    b = { x: width * 0.92, y: height * 0.3, w: width * 0.08, h: height * 0.4 };
+    kind = 'side-bands';
+  }
+  const chest = fb ? { x: fb.x + fb.w * 0.25, y: fb.y + fb.h * 0.95, w: fb.w * 0.5, h: fb.h * 0.25 } : null;
+  const face = fb ? { x: fb.x + fb.w * 0.38, y: fb.y + fb.h * 0.3, w: fb.w * 0.24, h: fb.h * 0.12 } : null;
+  return { bg: [a, b], chest, face, kind };
+}
+
+/** Landmarks may be normalised or in pixels; return a normalised box either way. */
+export function normaliseBox(b: Rect, width: number, height: number): Rect {
+  const normalised = Math.max(b.x + b.w, b.y + b.h) <= 1.6;
+  return normalised ? b : { x: b.x / width, y: b.y / height, w: b.w / width, h: b.h / height };
+}

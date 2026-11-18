@@ -20,7 +20,16 @@
     "test:coverage": "vitest run --coverage",
     "build:web": "npm run build:web -w @witness/desktop",
     "build:desktop": "npm run build -w @witness/desktop",
-    "e2e:ui": "playwright test --trace off"
+    "e2e:ui": "playwright test --trace off",
+    "bench": "tsx tools/bench/src/cli.ts",
+    "bench:estimate": "tsx tools/bench/src/cli.ts estimate",
+    "bench:record": "tsx tools/bench/src/cli.ts record",
+    "bench:replay": "tsx tools/bench/src/cli.ts replay",
+    "bench:calibrate": "tsx tools/bench/src/cli.ts calibrate",
+    "bench:report": "tsx tools/bench/src/cli.ts report",
+    "egress": "tsx tools/egress-audit/src/cli.ts",
+    "egress:matrix": "tsx tools/egress-audit/src/cli.ts matrix",
+    "egress:report": "tsx tools/egress-audit/src/cli.ts report"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
