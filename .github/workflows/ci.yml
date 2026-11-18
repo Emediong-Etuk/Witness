@@ -7,6 +7,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -14,8 +15,24 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - run: npx playwright install --with-deps chromium
+      # apt's man-db index rebuild stalls on ubuntu-24.04 runners; both ffmpeg and
+      # `playwright install --with-deps` use apt, so switch it off before either.
+      - name: Disable man-db auto-update
+        run: sudo rm -f /var/lib/man-db/auto-update
+      - name: Install ffmpeg (bench + lab-recorder tests)
+        timeout-minutes: 8
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then ffmpeg -version | head -1; exit 0; fi
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 install -y --no-install-recommends ffmpeg
+          ffmpeg -version | head -1
+      - name: Install Chromium for Playwright
+        timeout-minutes: 8
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: npx playwright install --with-deps chromium
       - run: npm run typecheck
       - run: npm run test:coverage
       - run: npm run verify
@@ -24,6 +41,7 @@ jobs:
       - run: npm run build:desktop
   ui:
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -31,7 +49,15 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # apt's man-db index rebuild stalls on ubuntu-24.04 runners; both ffmpeg and
+      # `playwright install --with-deps` use apt, so switch it off before either.
+      - name: Disable man-db auto-update
+        run: sudo rm -f /var/lib/man-db/auto-update
+      - name: Install Chromium for Playwright
+        timeout-minutes: 8
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: npx playwright install --with-deps chromium
       - run: npm run build:web
       - run: npm run build:site
       - run: npx playwright test --trace off
