@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "calibration": {
+    "status": "UNCALIBRATED",
+    "note": "Starting values from BUILD_PROMPT §5.1 / SDK docs. Every value marked CAL below is a placeholder until `npm run bench:calibrate` rewrites this file from the calibration split and it is committed + tagged m4-thresholds-frozen.",
+    "calibratedKeys": []
+  },
+  "windowsS": { "pulse": 12, "breathing": 30, "hrv": 60 },
+  "minEvidenceHz": 10,
+  "sdkConfidenceMin": { "pulse": 40, "breathing": 45, "hrv": 50 },
+  "range": { "pulse": [40, 110], "breathing": [5, 40], "hrvPulse": [40, 110] },
+  "validation": {
+    "maxNonOkShare": 0.03,
+    "maxEpisodeMs": 500,
+    "unknownCountsAsNonOk": true,
+    "faceCountCodes": [1, 2]
+  },
+  "still": { "rmsWindowS": 1, "maxRms": 0.01 },
+  "quiet": { "maxTalkingS": 1 },
+  "frameRate": { "minFps": 25, "binS": 1 },
+  "steadyLight": {
+    "fs": 30,
+    "fullBandHz": [0.05, 5],
+    "bandHz": { "pulse": [0.6667, 1.8333], "breathing": [0.0833, 0.6667], "hrv": [0.6667, 1.8333] },
+    "tolHz": { "pulse": 0.0833, "breathing": 0.0333, "hrv": 0.0833 },
+    "segS": { "pulse": 12, "breathing": 30, "hrv": 12 },
+    "maxBandRatio": { "pulse": 0.5, "breathing": 0.5, "hrv": 0.5 },
+    "maxCoincidentSnr": 10
+  },
+  "chewing": { "fs": 30, "winS": 3, "hopS": 1, "loHz": 0.7, "hiHz": 2.5, "sustain": 3, "maxPeak": 0.6 },
+  "liveFace": { "blinkWindowS": 30, "minBlinks": 1, "minMeanMotion": 0.0002 },
+  "appliesTo": {
+    "R1_WARMUP": ["pulse", "breathing", "hrv"],
+    "R2_SDK_STABLE": ["pulse", "breathing", "hrv"],
+    "R3_RANGE": ["pulse", "breathing", "hrv"],
+    "R4_VALIDATION_CLEAN": ["pulse", "breathing", "hrv"],
+    "R5_ONE_CONTINUOUS_FACE": ["pulse", "breathing", "hrv"],
+    "R6_STILL": ["pulse", "breathing", "hrv"],
+    "R7_QUIET": ["breathing"],
+    "R8_FRAME_RATE": ["pulse", "breathing", "hrv"],
+    "R9_STEADY_LIGHT": ["pulse", "breathing", "hrv"],
+    "R10_NO_CHEWING": ["pulse", "hrv"],
+    "R11_LIVE_FACE": ["pulse", "breathing", "hrv"]
+  },
+  "reasonOrder": [
+    "R6_STILL", "R7_QUIET", "R10_NO_CHEWING", "R9_STEADY_LIGHT", "R5_ONE_CONTINUOUS_FACE",
+    "R4_VALIDATION_CLEAN", "R11_LIVE_FACE", "R8_FRAME_RATE", "R2_SDK_STABLE", "R3_RANGE", "R1_WARMUP"
+  ]
+}

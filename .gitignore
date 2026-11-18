@@ -1,0 +1,18 @@
+# secrets first
+.env
+.env.*
+!.env.example
+*.key
+key.bin
+
+node_modules/
+dist/
+out/
+coverage/
+*.log
+.DS_Store
+vendor/
+corpus/clips/
+test-results/tmp/
+*.y4m
+*.tsbuildinfo

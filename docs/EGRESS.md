@@ -1,0 +1,37 @@
+# What leaves the computer: evidence
+
+Status: **draft**. The static analysis is done; the empirical audit (§13.7) and the Presage Discord answer are pending.
+
+## 1. LLM Insights auto-dispatch (BUILD_PROMPT §7.6)
+
+### 1a. Static analysis of `@smartspectra/node-sdk@3.5.0` (done 2026-11-18)
+
+| Question | Finding | Evidence |
+| --- | --- | --- |
+| Is there a config field (JS or C ABI) that disables insights? | **No.** The C config struct has `disable_telemetry` but nothing for insights. `reserved0` is always 0. | `js/ffi.js`, `smartspectra_config_t` declaration |
+| Does leaving out an `'insight'` listener null the native callback? | **No.** `_ensureSession()` always passes `onInsight`, and `_emit` only drops the event in JS. | `js/smartspectra.js`, `_ensureSession` |
+| Does `bindSmartSpectraIpc` register an insight sink? | **Yes, always.** It forwards insights to the renderer port. | `js/main/index.js`, `installCallbacks` |
+| Does dispatch depend on breathing **and** cardio both being requested? | Unknown from JS. This is decided in native code. | Pending test (c) |
+| Gateway hostname? | Not in `libsmartspectra_capi.so` strings. | Pending egress audit |
+
+**What this means for now:** Witness can't rely on "no listener means no dispatch". Until the empirical tests show otherwise, the consent card must assume that during a session the SDK may send pulse/HRV/breathing **numbers** (never video) to Presage's AI gateway.
+
+### 1b. Empirical tests (pending, need Greg's machine + key)
+
+| Test | Config | Result |
+| --- | --- | --- |
+| (a) | Full mode, insight listener on, 3 min. Count insights with a foreign `requestId`. | TBD |
+| (b) | Full mode, no app listener, egress audit at 500 ms. Hosts that appear only in (a)? | TBD |
+| (c) | Quick mode (no breathing), repeat (a) | TBD |
+
+### 1c. Presage answer (pending)
+
+Question for the Presage Discord: *"Does the Node SDK auto-dispatch vitals insights when no insight listener is registered, and is there a way to disable it?"*
+
+Answer: TBD
+
+## 2. Egress audit table (pending, tools/egress-audit)
+
+| Config | Host | Port | First seen | Last seen | Count |
+| --- | --- | --- | --- | --- | --- |
+| TBD | | | | | |
