@@ -349,7 +349,9 @@ export class SessionController {
         m.countdownS = left;
         m.progress = Math.max(0, Math.min(1, (W - left) / W));
       } else {
-        const el = nowUs / US;
+        // Warming up: progress since the stream started (start-up tuning excluded).
+        const r1 = r?.checks.find((c) => c.id === 'R1_WARMUP');
+        const el = typeof r1?.observed === 'number' ? r1.observed + (nowUs - r!.window.endUs) / US : nowUs / US;
         m.progress = Math.max(0, Math.min(1, el / W));
         m.countdownS = Math.max(0, W - el);
         if (m.status === 'idle' && el > 0) m.status = 'filling';

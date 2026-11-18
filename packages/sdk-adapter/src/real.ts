@@ -13,7 +13,7 @@ export interface RendererSdkLike {
 
 export interface RealOptions {
   /** Builds the renderer SDK (injected so this package has no SDK dependency). */
-  create: () => RendererSdkLike;
+  create: () => RendererSdkLike | Promise<RendererSdkLike>;
   decode: (buf: Uint8Array) => DecodedMetricsLike;
   mode: 'quick' | 'full';
   sdkVersion: string;
@@ -63,15 +63,25 @@ export class RealSmartSpectra implements VitalsSource {
     return this.streams.on(l);
   }
 
+  /** Map a renderer-clock µs reading onto the session clock (for host-side frame features). */
+  sessionTime(clockUs: number): number {
+    return clockUs - this.t0;
+  }
+
+  /** Let the host inject events it derives itself (e.g. frame ROI luminance) into this stream. */
+  inject(e: SourceEvent): void {
+    this.events.emit(e);
+  }
+
   private toSession(sdkTs: number): number {
     return this.sdkClock.toSession(sdkTs, this.clockUs()) - this.t0;
   }
 
   async start(): Promise<void> {
     if (this.sdk) return;
-    const sdk = this.o.create();
-    this.sdk = sdk;
     this.t0 = this.clockUs();
+    const sdk = await this.o.create();
+    this.sdk = sdk;
     this.tracker.reset();
     sdk.on('processingStatus', ((status: number) => this.events.emit({ type: 'status', t: this.nowUs(), status })) as never);
     sdk.on('validationStatus', ((code: number, ts: number, hint: string) => {

@@ -25,13 +25,14 @@ const US = 1e6;
 
 const KIND_ORDER: Record<GateEvent['kind'], number> = {
   session: 0,
-  validation: 1,
-  talking: 2,
-  blink: 3,
-  landmarks_reset: 4,
-  face_feature: 5,
-  frame: 6,
-  rate: 7,
+  stream_ready: 1,
+  validation: 2,
+  talking: 3,
+  blink: 4,
+  landmarks_reset: 5,
+  face_feature: 6,
+  frame: 7,
+  rate: 8,
 };
 
 interface Keyed {
@@ -69,8 +70,13 @@ function lastBefore(events: readonly GateEvent[], kind: GateEvent['kind'], befor
  * canonical bytes) so the result never depends on arrival order: the session
  * start, the piecewise states carried into the lookback, and everything in it.
  */
-function selectInputs(events: readonly GateEvent[], t: number, lookback: number): { sorted: Keyed[]; session: Extract<GateEvent, { kind: 'session' }> | undefined } {
+function selectInputs(
+  events: readonly GateEvent[],
+  t: number,
+  lookback: number,
+): { sorted: Keyed[]; session: Extract<GateEvent, { kind: 'session' }> | undefined; ready: Extract<GateEvent, { kind: 'stream_ready' }> | undefined } {
   let session: Keyed | undefined;
+  let ready: Keyed | undefined;
   const win: Keyed[] = [];
   for (const e of events) {
     if (e.t > t) continue;
@@ -79,17 +85,27 @@ function selectInputs(events: readonly GateEvent[], t: number, lookback: number)
       if (!session || cmp(k, session) < 0) session = k;
       continue;
     }
+    if (e.kind === 'stream_ready') {
+      const k = { e, key: keyOf(e) };
+      if (!ready || cmp(k, ready) < 0) ready = k;
+      continue;
+    }
     if (e.t >= lookback) win.push({ e, key: keyOf(e) });
   }
   win.sort(cmp);
   const head: Keyed[] = [];
   if (session) head.push(session);
+  if (ready) head.push(ready);
   const cv = lastBefore(events, 'validation', lookback);
   const ct = lastBefore(events, 'talking', lookback);
   if (cv) head.push(cv);
   if (ct) head.push(ct);
   head.sort(cmp);
-  return { sorted: [...head, ...win], session: session?.e as Extract<GateEvent, { kind: 'session' }> | undefined };
+  return {
+    sorted: [...head, ...win],
+    session: session?.e as Extract<GateEvent, { kind: 'session' }> | undefined,
+    ready: ready?.e as Extract<GateEvent, { kind: 'stream_ready' }> | undefined,
+  };
 }
 
 /** A piecewise-constant state (validation code, talking) integrated over [ws, we]. */
@@ -141,11 +157,14 @@ export function evaluate(sample: SdkRateSample, events: readonly GateEvent[], cf
   const t = sample.t;
   const ws = t - W * US;
   const lookback = t - Math.max(W, cfg.liveFace.blinkWindowS) * US;
-  const { sorted, session } = selectInputs(events, t, lookback);
+  const { sorted, session, ready } = selectInputs(events, t, lookback);
   const applies = (id: RuleId) => cfg.appliesTo[id]?.includes(metric) ?? false;
   const checks: Check[] = [];
-  // While the window is still filling, evidence is judged over [sessionStart, t].
-  const evStart = session ? Math.max(ws, session.t) : ws;
+  // The metric stream starts when start-up camera tuning ends (or at session
+  // start if there was none). While the window is still filling, evidence is
+  // judged over [streamStart, t].
+  const streamStart = ready ? (session ? Math.max(ready.t, session.t) : ready.t) : session?.t;
+  const evStart = streamStart !== undefined ? Math.min(t, Math.max(ws, streamStart)) : ws;
   const minSamples = Math.floor(((t - evStart) / US) * cfg.minEvidenceHz);
 
   const inputKeys = sorted.map((k) => k.key);
@@ -155,7 +174,7 @@ export function evaluate(sample: SdkRateSample, events: readonly GateEvent[], cf
 
   // ---- R1 warm-up
   if (applies('R1_WARMUP')) {
-    const elapsedS = session ? (t - session.t) / US : null;
+    const elapsedS = streamStart !== undefined ? Math.max(0, (t - streamStart) / US) : null;
     checks.push({
       id: 'R1_WARMUP',
       pass: elapsedS !== null && elapsedS >= W,
@@ -187,7 +206,7 @@ export function evaluate(sample: SdkRateSample, events: readonly GateEvent[], cf
         id: 'R3_RANGE',
         pass: ok,
         observed: { pulseMin: r6(vals.length ? Math.min(...vals) : null), pulseMax: r6(vals.length ? Math.max(...vals) : null), pulseSamples: vals.length },
-        threshold: { pulse: [lo, hi] },
+        threshold: { pulseMin: lo, pulseMax: hi },
         unit: 'bpm',
       });
     } else {
@@ -225,7 +244,7 @@ export function evaluate(sample: SdkRateSample, events: readonly GateEvent[], cf
       id: 'R4_VALIDATION_CLEAN',
       pass: share <= cfg.validation.maxNonOkShare && longest / 1000 <= cfg.validation.maxEpisodeMs,
       observed: { nonOkShare: r6(share), longestEpisodeMs: r6(longest / 1000), codes: [...codes].sort((a, b) => a - b) },
-      threshold: { maxNonOkShare: cfg.validation.maxNonOkShare, maxEpisodeMs: cfg.validation.maxEpisodeMs },
+      threshold: { nonOkShare: cfg.validation.maxNonOkShare, longestEpisodeMs: cfg.validation.maxEpisodeMs },
     };
     checks.push(withViolation(check, check.pass ? null : lastBad));
   }
@@ -298,7 +317,7 @@ export function evaluate(sample: SdkRateSample, events: readonly GateEvent[], cf
       id: 'R7_QUIET',
       pass,
       observed: known ? { talkingS: r6(talkUs / US) } : { insufficientEvidence: true },
-      threshold: { maxTalkingS: cfg.quiet.maxTalkingS },
+      threshold: { talkingS: cfg.quiet.maxTalkingS },
     }, pass ? null : last ?? t));
   }
 
@@ -408,7 +427,7 @@ export function evaluate(sample: SdkRateSample, events: readonly GateEvent[], cf
       id: 'R11_LIVE_FACE',
       pass,
       observed: { blinks, meanMotion: r6(meanMotion) },
-      threshold: { minBlinks: lf.minBlinks, minMeanMotion: lf.minMeanMotion },
+      threshold: { blinks: lf.minBlinks, meanMotion: lf.minMeanMotion },
     }, pass ? null : t));
   }
 

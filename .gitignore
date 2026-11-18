@@ -16,3 +16,5 @@ corpus/clips/
 test-results/tmp/
 *.y4m
 *.tsbuildinfo
+dist-web/
+test-results/

@@ -1,6 +1,8 @@
 import type { GateEvent } from '@witness/gate';
 import type { SourceEvent } from './events.js';
 
+const CAMERA_TUNING = 10;
+
 /**
  * Stateful SourceEvent → GateEvent mapper. Piecewise states (validation code,
  * talking) are emitted only when they change; that's lossless for the gate,
@@ -9,21 +11,30 @@ import type { SourceEvent } from './events.js';
 export class GateEventMapper {
   private lastCode: number | null = null;
   private lastTalking: boolean | null = null;
+  private ready = false;
 
   constructor(private readonly mode: 'quick' | 'full') {}
 
   start(t = 0): GateEvent[] {
     this.lastCode = null;
     this.lastTalking = null;
+    this.ready = false;
     return [{ kind: 'session', t, mode: this.mode }];
   }
 
   map(e: SourceEvent): GateEvent[] {
     switch (e.type) {
-      case 'validation':
-        if (e.code === this.lastCode) return [];
+      case 'validation': {
+        const out: GateEvent[] = [];
+        if (!this.ready && e.code !== CAMERA_TUNING) {
+          this.ready = true;
+          out.push({ kind: 'stream_ready', t: e.t });
+        }
+        if (e.code === this.lastCode) return out;
         this.lastCode = e.code;
-        return [{ kind: 'validation', t: e.t, code: e.code }];
+        out.push({ kind: 'validation', t: e.t, code: e.code });
+        return out;
+      }
       case 'rate':
         return [{ kind: 'rate', t: e.t, metric: e.metric, value: e.value, confidence: e.confidence, stable: e.stable }];
       case 'face': {

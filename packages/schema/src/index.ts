@@ -6,6 +6,7 @@ const nullableNum = z.number().finite().nullable();
 
 export const GateEventSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('session'), t, mode: z.enum(['quick', 'full']) }).strict(),
+  z.object({ kind: z.literal('stream_ready'), t }).strict(),
   z.object({ kind: z.literal('validation'), t, code: z.number().int().min(0).max(64) }).strict(),
   z.object({ kind: z.literal('rate'), t, metric, value: z.number().finite(), confidence: z.number().finite(), stable: z.boolean() }).strict(),
   z.object({ kind: z.literal('talking'), t, detected: z.boolean() }).strict(),

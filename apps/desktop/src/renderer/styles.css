@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+@import '@witness/ui/fonts.css';
+@import '@witness/ui/tokens.css';
+
+@source '../../../../packages/ui/src';
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-raised: var(--raised);
+  --color-raised-2: var(--raised-2);
+  --color-hairline: var(--hairline);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-verified: var(--verified);
+  --color-warming: var(--warming);
+  --color-withheld: var(--withheld);
+  --color-replay: var(--replay);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-mono);
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(1200px 600px at 50% -10%, color-mix(in oklab, var(--verified) 6%, transparent), transparent);
+}
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+.tabular { font-variant-numeric: tabular-nums; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

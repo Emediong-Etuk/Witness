@@ -47,6 +47,29 @@ describe('clean session', () => {
   });
 });
 
+describe('start-up camera tuning (stream_ready)', () => {
+  // SDK-like start: CAMERA_TUNING 0–2 s, then OK; the mapper emits stream_ready at 2 s.
+  const tuned = () => {
+    const ev = synth({ durS: 75 }).filter((e) => !(e.kind === 'validation' && e.t === 0));
+    ev.push({ kind: 'validation', t: 0, code: 10 }, { kind: 'stream_ready', t: 2e6 }, { kind: 'validation', t: 2e6, code: 0 });
+    return ev;
+  };
+  it('breathing at 20 s is WARMING_UP (not withheld for framing)', () => {
+    const r = run(tuned(), 'breathing', 20);
+    expect(r.verdict).toBe('WARMING_UP');
+    expect(r.checks.find((c) => c.id === 'R1_WARMUP')!.observed).toBe(18);
+  });
+  it('the window counts from the end of tuning: breathing verifies at 32 s, not 30 s', () => {
+    expect(run(tuned(), 'breathing', 31).verdict).toBe('WARMING_UP');
+    expect(run(tuned(), 'breathing', 32).verdict).toBe('VERIFIED');
+  });
+  it('tuning in the middle of a session still counts as non-OK', () => {
+    const ev = tuned();
+    ev.push({ kind: 'validation', t: 50e6, code: 10 }, { kind: 'validation', t: 52e6, code: 0 });
+    expect(failed(run(ev, 'breathing', 60))).toContain('R4_VALIDATION_CLEAN');
+  });
+});
+
 describe('each rule fires on its contamination', () => {
   const cases: [string, Parameters<typeof synth>[0], Metric, string][] = [
     ['talking → breathing withheld (R7)', { durS: 75, talking: [{ from: 50, to: 60 }] }, 'breathing', 'R7_QUIET'],

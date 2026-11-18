@@ -6,6 +6,16 @@
     "packages/*/config/*.json",
     "tools/*/src",
     "tools/*/test",
+    "apps/desktop/src","apps/desktop/test",
+    "apps/desktop/*.config.ts",
     "vitest.config.ts"
-  ]
+  ],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ]
+  }
 }

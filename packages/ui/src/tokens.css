@@ -1,0 +1,59 @@
+/* "A lab notebook in a darkroom." Status is never colour-only: always icon + word. */
+:root {
+  --bg: #0f110e;
+  --raised: #171a15;
+  --raised-2: #1d211b;
+  --hairline: #2a2f27;
+  --ink: #eceae2;
+  --muted: #9aa093;
+  --verified: #7cf2b0;
+  --warming: #f5b94a;
+  --withheld: #ff7a6b;
+  --replay: #b9a6ff;
+  --focus: #eceae2;
+  --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+  --font-ui: 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg: #f4f2ea;
+    --raised: #ffffff;
+    --raised-2: #ecebe3;
+    --hairline: #d6d4ca;
+    --ink: #161813;
+    --muted: #5c6157;
+    --verified: #0a7042;
+    --warming: #8a5900;
+    --withheld: #c4372a;
+    --replay: #6248d6;
+    --focus: #161813;
+    color-scheme: light;
+  }
+}
+:root[data-theme='light'] {
+  --bg: #f4f2ea;
+  --raised: #ffffff;
+  --raised-2: #ecebe3;
+  --hairline: #d6d4ca;
+  --ink: #161813;
+  --muted: #5c6157;
+  --verified: #0a7042;
+  --warming: #8a5900;
+  --withheld: #c4372a;
+  --replay: #6248d6;
+  --focus: #161813;
+  color-scheme: light;
+}
+@keyframes witness-verified-pulse {
+  0%, 100% { opacity: 0.35; }
+  12% { opacity: 0.9; }
+}
+@keyframes witness-print {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}

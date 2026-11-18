@@ -61,7 +61,10 @@ describe('GateEventMapper', () => {
   it('emits piecewise states only on change', () => {
     const m = new GateEventMapper('full');
     expect(m.start()).toEqual([{ kind: 'session', t: 0, mode: 'full' }]);
-    expect(m.map({ type: 'validation', t: 1, code: 0, hint: '' })).toHaveLength(1);
+    expect(m.map({ type: 'validation', t: 0, code: 10, hint: 'tuning' })).toEqual([{ kind: 'validation', t: 0, code: 10 }]);
+    expect(m.map({ type: 'validation', t: 1, code: 0, hint: '' })).toEqual([{ kind: 'stream_ready', t: 1 }, { kind: 'validation', t: 1, code: 0 }]);
+    expect(m.map({ type: 'validation', t: 1.5, code: 10, hint: '' })).toEqual([{ kind: 'validation', t: 1.5, code: 10 }]);
+    m.map({ type: 'validation', t: 1.7, code: 0, hint: '' });
     expect(m.map({ type: 'validation', t: 2, code: 0, hint: '' })).toHaveLength(0);
     expect(m.map({ type: 'face', t: 3, talking: false, blinking: true, landmarksReset: true }).map((e) => e.kind)).toEqual(['talking', 'blink', 'landmarks_reset']);
     expect(m.map({ type: 'face', t: 4, talking: false, blinking: false, landmarksReset: false })).toHaveLength(0);

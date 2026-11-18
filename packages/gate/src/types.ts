@@ -9,6 +9,12 @@ export const METRIC_UNIT: Record<Metric, string> = { pulse: 'bpm', breathing: 'b
  */
 export type GateEvent =
   | { kind: 'session'; t: number; mode: 'quick' | 'full' }
+  /**
+   * The SDK finished its start-up CAMERA_TUNING (first validation code that
+   * isn't tuning). Windows are counted from here: start-up tuning is the
+   * stream starting, not contamination. Tuning later in a session still counts.
+   */
+  | { kind: 'stream_ready'; t: number }
   /** SDK ValidationStatus. Piecewise-constant: holds until the next validation event. */
   | { kind: 'validation'; t: number; code: number }
   /** SDK rate sample (pulse rate, breathing rate, HRV RMSSD). */

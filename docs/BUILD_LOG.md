@@ -41,3 +41,47 @@ Facts confirmed from the package itself:
 - Gate cost: about 3.5–5 ms per evaluation on this container (450 evaluations of a 150-s synthetic session in 2.1 s). Rate samples arrive at ~1 Hz per metric, so this runs off the per-frame path.
 
 **Open / blocked on Greg:** machine OS/hardware, the API key in `.env`, the Presage MCP login, ground-truth device, clip publishing, second-person consent, final name. See the questions at the end of this block's chat message.
+
+---
+
+## 2026-11-18, ~16:00–17:40 WAT · Block 2: Electron shell, replay mode, session controller, UI tests
+
+**Credits used:** 0 (no key, no SDK session; everything ran on synthetic replay).
+
+**Built:**
+- `packages/sdk-adapter`: `SourceEvent` vocabulary (no frames, no coordinates), `normalizeMetrics` (protobuf deltas → events; `Long` timestamps), `LandmarkFeatureTracker`, `GateEventMapper`, `TraceReplaySdk` (JSONL, original timing, injectable clock), `RealSmartSpectra` (injected renderer SDK; clock alignment from validation callbacks), and 7 **synthetic** scenarios. Synthetic traces are labelled `synthetic:*` with `sdkVersion: "synthetic"`, are marked in the UI, and must never be reported as results.
+- `packages/session`: `SessionController` + XState flow. A source can only be created by `accept()` from the consent state. Covers progressive results, auto-complete, pause on MULTIPLE_FACES, stop on hide/cap/user, and no auto-restart on errors. The check-in record includes the SDK-stable-but-withheld "ghost" readings.
+- `packages/ui`: tokens (dark + light), rings (spring rewind, coral break tick, glow pulsing at the verified BPM), thermal receipt card, sparkline, DPR-aware waveform. Fonts are self-hosted (OFL).
+- `apps/desktop`:
+  - main process: app:// protocol + CSP header, permissions, navigation lock, encrypted key store, AES-GCM history store, settings, zod-validated IPC;
+  - bundled preload;
+  - React renderer: home, key setup, consent, measuring, results rail, receipts, history with ghost overlay, data sheet with 1.5-s hold delete;
+  - feature worker.
+- The browser build of the same renderer (`npm run build:web`) uses an in-memory bridge and is replay-only.
+
+**Decisions:**
+- **`stream_ready` gate event.** The first screenshots showed breathing and HRV as "Withheld · framing" during warm-up, because the SDK's start-up CAMERA_TUNING (0–2 s) fell inside their windows. Windows now count from the end of start-up tuning. Mid-session tuning still counts as non-OK. Three new gate tests cover this.
+- **Receipt threshold keys now match the observed keys** (e.g. `nonOkShare` / `nonOkShare`), so the receipt can print "observed / limit" per line.
+- **One event stream** (`on(listener)`) instead of the prompt's `on('metrics'|'validation'|…)`. It's simpler, and real and replay are indistinguishable to the UI apart from `kind`, which drives the Replay badge.
+- **Tooling:**
+  - npm 10 (Node 22 here) crashes in arborist (`edgesOut`) resolving vitest 5's peers, so the repo needs **npm ≥ 11**, which ships with Node 24. `engines` is set to match.
+  - Upgraded to vitest 5.1.0 + vite 8.3.5, because one vite version is needed across electron-vite, plugin-react and vitest.
+  - All new versions were published before 2026-11-04 (≥ 2 weeks old).
+- **Electron can't run in this container.** Its binary download comes from GitHub, which the proxy blocks (`ELECTRON_SKIP_BINARY_DOWNLOAD=1`). `electron-vite build` succeeds, the preload bundle requires only `electron`, and main externalizes only `@smartspectra/node-sdk` and `zod`. **The first real Electron launch has to happen on Greg's machine.**
+
+**Measured (this block):**
+- `npx vitest run`: 107 tests pass.
+- `npx playwright test` (renderer in Chromium 1.63, synthetic replay, in-memory bridge): 10 pass. They cover:
+  - no `getUserMedia` before consent;
+  - progressive results + receipt;
+  - talking → breathing withheld with reason + countdown;
+  - flicker → pulse withheld;
+  - multiple faces → pause/resume;
+  - hide → stop within 1 s;
+  - history ghost overlay;
+  - hold-to-delete;
+  - axe-core with 0 serious/critical violations in dark and light.
+- axe initially flagged light-theme contrast. Fixed by darkening `--verified` (#0a7042) and `--warming` (#8a5900) in light mode, and by changing the replay label inside the primary button.
+- `npm audit --omit=dev`: 0 vulnerabilities. Dev-only: `picomatch` ReDoS advisory (GHSA-fc5q-39xc-vjpf, all versions, no fix available), pulled in by build tooling. Documented exception.
+
+**Not done yet / next:** first Electron launch + `m1-sdk-hello` on Greg's machine; egress audit; bench record/replay/calibrate; verify CLI; packaging, fuses, release; judge site.

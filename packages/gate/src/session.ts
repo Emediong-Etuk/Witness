@@ -14,6 +14,7 @@ export class GateSession {
   readonly receipts: Receipt[] = [];
   private readonly keepUs: number;
   private sessionEvent: GateEvent | null = null;
+  private readyEvent: GateEvent | null = null;
 
   constructor(
     readonly sessionId: string,
@@ -26,6 +27,7 @@ export class GateSession {
 
   push(e: GateEvent): Receipt | null {
     if (e.kind === 'session') this.sessionEvent = e;
+    if (e.kind === 'stream_ready' && !this.readyEvent) this.readyEvent = e;
     this.events.push(e);
     if (e.kind !== 'rate') return null;
     return this.evaluateNow(e);
@@ -59,6 +61,7 @@ export class GateSession {
     }
     const head: GateEvent[] = [];
     if (this.sessionEvent && this.sessionEvent.t < cut) head.push(this.sessionEvent);
+    if (this.readyEvent && this.readyEvent.t < cut) head.push(this.readyEvent);
     if (lastVal) head.push(lastVal);
     if (lastTalk) head.push(lastTalk);
     this.events = [...head, ...keep];
