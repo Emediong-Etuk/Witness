@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { devInlineStyles } from '../../config/vite-dev-csp';
 import { defineConfig } from 'electron-vite';
 
 export default defineConfig({
@@ -14,7 +15,7 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), devInlineStyles()],
     worker: { format: 'es' },
     // assetsInlineLimit 0: fonts must be files under the CSP's font-src 'self'
     build: { assetsInlineLimit: 0, rollupOptions: { input: resolve(__dirname, 'src/renderer/index.html') } },

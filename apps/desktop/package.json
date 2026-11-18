@@ -5,6 +5,7 @@
   "description": "Witness desktop app (Electron).",
   "main": "out/main/index.js",
   "scripts": {
+    "predev": "install-electron",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "build:web": "vite build --config vite.web.config.ts",

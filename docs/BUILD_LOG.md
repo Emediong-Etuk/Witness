@@ -277,3 +277,13 @@ So recorder output feeds straight into the bench.
   - axe with 0 serious/critical in dark and light.
 - Compliance lint: 2 tests pass, with 0 hits in scope.
 - The tamper playground takes about 6 s in the browser to build and verify the demo corpus.
+
+### First launch on Greg's machine (Windows): "Electron uninstall"
+- `npm run dev -w @witness/desktop` failed with `Error: Electron uninstall` from electron-vite's `getElectronPath`.
+- Cause: Electron 45 has no postinstall; its binary is fetched lazily by `install-electron` (or on first `require('electron')`), and electron-vite 6 only checks for `path.txt`, so it throws before anything downloads.
+- Fix: `"predev": "install-electron"` in `apps/desktop/package.json`, so `npm run dev` fetches the binary first (it exits at once if it's already there). Checked in the container: the download wrote `node_modules/electron/path.txt` and `dist/`.
+- With the binary now downloadable here, the real Electron app runs in the container (xvfb + Playwright `_electron`). Two fixes came out of that:
+  - **`app://` pages failed to load outside dev** (`ERR_BLOCKED_BY_CLIENT` → `ERR_UNEXPECTED`). The protocol handler loaded files with `net.fetch(file://…)`, and our own request filter, which allows only `app://`, blocked `file:`. This would have broken the packaged build. The handler now reads files from disk with a fixed MIME allowlist, and the filter stays strict. Checked: the home screen loads from `app://witness/index.html`, and a Quick clean replay completes, verifies, chains 14 receipts and saves.
+  - **`safeStorage` deprecation warnings** (seen on Greg's first launch). KeyStore and DataStore now use `isAsyncEncryptionAvailable` / `encryptStringAsync` / `decryptStringAsync` (re-encrypting when `shouldReEncrypt` says so), and DataStore runs its operations one at a time so awaits can't interleave writes. No warnings in the container run; 157 unit tests pass.
+- Greg's log also showed `Network service crashed or was terminated, restarting service` once. Chromium restarts that service by itself. It didn't recur in the container; watching for it.
+- **Unstyled window in dev mode** (Greg's second screenshot). The renderer's meta CSP has `style-src 'self'`, and in dev Vite injects CSS as inline `<style>` tags, so all styles were blocked (Chromium: "Applying inline style violates … 'style-src 'self''"). My headless check had used the built app, which ships real `.css` files and was fine. Fix: `config/vite-dev-csp.ts`, a serve-only Vite plugin that adds `'unsafe-inline'` to `style-src` while the dev server runs, used by the desktop, web-renderer and site configs. Checked: under `electron-vite dev` the h1 renders in Instrument Serif, and the built `index.html` still has `style-src 'self'`.

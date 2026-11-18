@@ -1,7 +1,7 @@
-import { app, BrowserWindow, net, protocol } from 'electron';
+import { app, BrowserWindow, protocol } from 'electron';
 import { existsSync, readFileSync } from 'node:fs';
-import { join, normalize, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { readFile } from 'node:fs/promises';
+import { extname, join, normalize, sep } from 'node:path';
 import type { Checkin } from '../shared/ipc-schema';
 import { DataStore } from './datastore';
 import { registerIpc, safeStorageWrapper } from './ipc';
@@ -44,6 +44,25 @@ if (!app.requestSingleInstanceLock()) app.quit();
 let win: BrowserWindow | null = null;
 let sdkVersion = 'unavailable';
 
+const MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.wasm': 'application/wasm',
+};
+
+/**
+ * Serves the renderer bundle from disk. It reads files directly rather than
+ * through net.fetch(file://): the session's request filter blocks every
+ * non-app:// URL, file: included, and the filter should stay that strict.
+ */
 function registerAppProtocol(): void {
   const root = join(__dirname, '../renderer');
   protocol.handle('app', async (req) => {
@@ -52,12 +71,23 @@ function registerAppProtocol(): void {
     const rel = decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname);
     const file = normalize(join(root, rel));
     if (!file.startsWith(root + sep)) return new Response('forbidden', { status: 403 });
-    const res = await net.fetch(pathToFileURL(file).toString());
-    const headers = new Headers(res.headers);
-    headers.set('Content-Security-Policy', CSP);
-    headers.set('X-Content-Type-Options', 'nosniff');
-    headers.set('Cross-Origin-Opener-Policy', 'same-origin');
-    return new Response(res.body, { status: res.status, headers });
+    const type = MIME[extname(file).toLowerCase()];
+    if (!type) return new Response('not found', { status: 404 });
+    let body: Buffer;
+    try {
+      body = await readFile(file);
+    } catch {
+      return new Response('not found', { status: 404 });
+    }
+    return new Response(new Uint8Array(body), {
+      status: 200,
+      headers: {
+        'Content-Type': type,
+        'Content-Security-Policy': CSP,
+        'X-Content-Type-Options': 'nosniff',
+        'Cross-Origin-Opener-Policy': 'same-origin',
+      },
+    });
   });
 }
 
@@ -112,7 +142,7 @@ app.whenReady().then(() => {
   const keys = new KeyStore();
   const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
   const store = new DataStore<Checkin>(app.getPath('userData'), safeStorageWrapper);
-  const purge = () => store.purge(settings.get().retentionDays);
+  const purge = () => void store.purge(settings.get().retentionDays).catch(() => undefined);
   purge();
   setInterval(purge, 3_600_000).unref();
   registerIpc({

@@ -13,8 +13,8 @@ export class KeyStore {
   private readonly file = join(app.getPath('userData'), 'key.bin');
   private readonly plainFile = join(app.getPath('userData'), 'key.plain');
 
-  get encryptionAvailable(): boolean {
-    return safeStorage.isEncryptionAvailable();
+  encryptionAvailable(): Promise<boolean> {
+    return safeStorage.isAsyncEncryptionAvailable();
   }
 
   status(): { hasKey: boolean; encrypted: boolean; memoryOnly: boolean; fromEnv: boolean } {
@@ -27,11 +27,11 @@ export class KeyStore {
     };
   }
 
-  set(key: string, allowPlain = false): { stored: 'encrypted' | 'memory' | 'plain' } {
+  async set(key: string, allowPlain = false): Promise<{ stored: 'encrypted' | 'memory' | 'plain' }> {
     this.memory = key;
     mkdirSync(app.getPath('userData'), { recursive: true });
-    if (this.encryptionAvailable) {
-      writeFileSync(this.file, safeStorage.encryptString(key), { mode: 0o600 });
+    if (await this.encryptionAvailable()) {
+      writeFileSync(this.file, await safeStorage.encryptStringAsync(key), { mode: 0o600 });
       return { stored: 'encrypted' };
     }
     if (allowPlain) {
@@ -41,10 +41,12 @@ export class KeyStore {
     return { stored: 'memory' };
   }
 
-  get(): string | null {
+  async get(): Promise<string | null> {
     if (this.memory) return this.memory;
-    if (existsSync(this.file) && this.encryptionAvailable) {
-      this.memory = safeStorage.decryptString(readFileSync(this.file));
+    if (existsSync(this.file) && (await this.encryptionAvailable())) {
+      const { result, shouldReEncrypt } = await safeStorage.decryptStringAsync(readFileSync(this.file));
+      if (shouldReEncrypt) writeFileSync(this.file, await safeStorage.encryptStringAsync(result), { mode: 0o600 });
+      this.memory = result;
       return this.memory;
     }
     if (existsSync(this.plainFile)) return (this.memory = readFileSync(this.plainFile, 'utf8').trim());
