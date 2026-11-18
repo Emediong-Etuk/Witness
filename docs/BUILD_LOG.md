@@ -147,7 +147,7 @@ Facts confirmed from the package itself:
   - contamination labels;
   - replay and stats;
   - the report;
-  - doc markers (`<!-- bench:path|format -->…<!-- /bench -->`);
+  - doc markers (`<!-- bench:<path>|<format> -->…<!-- /bench -->`);
   - egress table rendering.
 - **`packages/schema`:** strict `TraceLineSchema`.
 - **`packages/verify`:** `verifyAll()` and `verifyCheckins()`. The checks are listed in ARCHITECTURE.md.
