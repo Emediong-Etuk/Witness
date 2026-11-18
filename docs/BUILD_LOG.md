@@ -177,3 +177,36 @@ Facts confirmed from the package itself:
   - a missing trace or receipts file;
   - a hand-edited egress table;
   - export value/hash/config forgery.
+
+---
+
+## 2026-11-18, ~19:40–20:40 WAT · Block 5: lab recorder
+
+**Credits used:** 0.
+
+**Built:** `tools/lab-recorder`, run with `npm run lab`. It's dev-only and never packaged.
+- **Clip plan** (`plan.ts`): 27 templates covering all 13 conditions from §13.2, 11 of them ★. Each template has scripted cues, a split and setup text. Labels are cue times ±1 s (`REACTION_PAD_S`).
+- **Server** (`server.ts`):
+  - bound to 127.0.0.1, with a random token in the page that API calls must echo;
+  - a Host-header check against DNS rebinding;
+  - uploads only for plan IDs and only with `X-Consent: attested`, no silent overwrite, and a 2 GB cap;
+  - manifest entries validated against `ManifestClipSchema`, including the clip hash check.
+- **Page:**
+  - camera preview, with an attempt to lock exposure, white balance and focus (the result is recorded in the notes);
+  - consent checkboxes;
+  - 3-2-1 countdown, then MediaRecorder at 25 Mbps;
+  - cue display with a next-cue countdown, reading text and a paced-breathing circle;
+  - an oximeter-pairs form.
+- **Flicker page:** photosensitivity gate, 3 Hz cap, smooth sine brightness, wake lock, and a standalone download for phones.
+
+**Decision:** a localhost web app instead of an Electron window. It runs in any browser on Greg's machine, and it's fully testable here with Chromium's fake camera.
+
+**Measured (this block):** 5 lab tests pass. The end-to-end test does the following:
+1. Real Chromium with a fake camera drives the actual recorder page through the 4-s test clip Z1: consent, cues, upload, form, save.
+2. The manifest entry validates, with padded intervals and ground truth.
+3. The bench's `probe()` reads the WebM frame by frame with per-frame timestamps.
+4. `recordClip` with the stub SDK sends every frame and writes a valid trace (timestamp passthrough = 1).
+
+So recorder output feeds straight into the bench.
+
+**Not done:** running the live SDK + gate during recording (§13.2, "if CPU allows"). It's optional, and it can't be tested here.

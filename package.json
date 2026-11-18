@@ -31,7 +31,8 @@
     "egress:matrix": "tsx tools/egress-audit/src/cli.ts matrix",
     "egress:report": "tsx tools/egress-audit/src/cli.ts report",
     "verify": "tsx tools/verify/src/cli.ts",
-    "bench:docs": "tsx tools/bench/src/cli.ts docs"
+    "bench:docs": "tsx tools/bench/src/cli.ts docs",
+    "lab": "tsx tools/lab-recorder/src/cli.ts"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

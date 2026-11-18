@@ -6,6 +6,23 @@ Real clips that Greg records of himself with the dev-only lab recorder, plus the
 - `clips/`: video files (gitignored). Published as GitHub Release assets only if `consent.publishVideo` is true.
 - `traces/<id>.jsonl`: hash-chained SDK traces. These are small and committed. They contain no frames, images, landmark coordinates or expressions.
 
+## Recording clips
+
+```bash
+npm run lab        # http://127.0.0.1:5199/ (localhost only)
+```
+
+The lab recorder (`tools/lab-recorder`, dev-only, never packaged) works like this:
+- **Clips:** it lists the plan below and records one clip at a time.
+- **Consent:** you tick a consent box per clip, plus a second-person box for X1. The server refuses uploads without it, and refuses clip IDs outside the plan.
+- **Recording:**
+  - shows the scripted cues with countdowns, the reading text for T clips and a breathing circle for R clips;
+  - records at 25 Mbps (WebM) and tries to lock exposure and white balance;
+  - writes `corpus/clips/<id>.webm`.
+- **Afterwards:** you enter the oximeter readings ("seconds bpm" pairs read off the phone video), a skin-type self-report, the lighting and the publish choice. It writes the manifest entry with the clip's SHA-256.
+- **Labels** are the cue times widened by ±1 s for reaction time (`REACTION_PAD_S`). That's conservative: more readings count as contaminated.
+- **Flicker page:** `/flicker`, or download `/flicker-standalone.html` and open it on a phone. It has a photosensitivity gate, a 3 Hz cap and smooth sine brightness.
+
 ## Clip plan (BUILD_PROMPT §13.2)
 
 The minimum viable set is marked ★. Each condition gets at least one clip in each split.

@@ -24,7 +24,8 @@ On our <!-- bench:clips.length|int -->TBD (run npm run bench:report)<!-- /bench 
 - `tools/egress-audit`: socket sampler + logging proxy + headless SDK probe ✅ (no real runs yet)
 - `tools/bench`: record / replay / calibrate / report ✅ (no real clips yet; held-out report locked until thresholds are frozen)
 - `tools/verify` (`npm run verify`, `npx witness-verify corpus/`): recomputes every chain, receipt, result and embedded number ✅
-- Lab recorder, packaging, judge site: not started
+- `tools/lab-recorder` (`npm run lab`): consented corpus recording with scripted cues, flicker page ✅
+- Packaging, judge site: not started
 
 Requires Node 24 (npm ≥ 11).
 
