@@ -2,6 +2,8 @@
 
 > Work in progress for the Presage SmartSpectra SDK Challenge (`#presagechallenge`). See `docs/BUILD_LOG.md`.
 
+**Judge site:** [witness-nine.vercel.app](https://witness-nine.vercel.app). It has a guided tour, the Replay Lab, an in-browser verifier and the flicker tool.
+
 Witness shows a pulse, breathing rate or HRV value only when the **entire** analysis window behind it passed every documented condition: still, quiet, steady light, one continuous face, enough frames, SDK confident. Each shown number comes with an evidence receipt that anyone can recompute.
 
 General wellness information, not medical advice.

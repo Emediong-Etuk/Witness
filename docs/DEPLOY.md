@@ -1,5 +1,7 @@
 # Deploying the judge site (Vercel)
 
+Production: **https://witness-nine.vercel.app**. This domain always serves the latest `main`. URLs like `witness-<hash>-obito17.vercel.app` each belong to one fixed deployment, so never share those.
+
 The site is static (`apps/web`). `vercel.json` at the repo root holds the whole configuration:
 - **Install:** a workspace-scoped `npm ci`, about 6 s. It skips the SDK's native binaries.
 - **Build:** `npm run build:site`.

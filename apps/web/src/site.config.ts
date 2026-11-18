@@ -1,5 +1,6 @@
 /** Things only Greg can fill in (video ids, deployed URLs). Null = not published yet; the site says so. */
 export const SITE = {
+  siteUrl: 'https://witness-nine.vercel.app',
   repoUrl: 'https://github.com/Emediong-Etuk/Witness',
   releasesUrl: 'https://github.com/Emediong-Etuk/Witness/releases',
   devPostUrl: null as string | null,
