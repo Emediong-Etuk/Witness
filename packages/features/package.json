@@ -1,0 +1,10 @@
+{
+  "name": "@witness/features",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure feature math for Witness: DSP, landmark motion/mouth/jaw, ROI luminance.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" }
+}

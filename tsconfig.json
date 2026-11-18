@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "packages/*/src",
+    "packages/*/test",
+    "packages/*/config/*.json",
+    "tools/*/src",
+    "tools/*/test",
+    "apps/desktop/src",
+    "apps/desktop/test",
+    "apps/desktop/*.config.ts",
+    "vitest.config.ts",
+    "apps/web/src",
+    "apps/web/*.config.ts",
+    "tools/compliance/*.ts",
+    "tools/compliance/test"
+  ],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ]
+  }
+}

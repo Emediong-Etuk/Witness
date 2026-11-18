@@ -1,0 +1,14 @@
+{
+  "name": "@witness/verify-cli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "npx witness-verify: recompute every receipt, chain head, result and embedded number from the published traces. No API key, no credits.",
+  "bin": { "witness-verify": "bin/witness-verify.mjs" },
+  "dependencies": {
+    "@witness/bench-core": "1.0.0",
+    "@witness/gate": "1.0.0",
+    "@witness/verify": "1.0.0",
+    "tsx": "^4.20.6"
+  }
+}

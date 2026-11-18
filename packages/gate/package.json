@@ -1,0 +1,17 @@
+{
+  "name": "@witness/gate",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The Clean-Window Gate: a pure, deterministic function from SDK samples + evidence to an evidence receipt.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config/gate.v1.json": "./config/gate.v1.json"
+  },
+  "dependencies": {
+    "@noble/hashes": "^1.8.0",
+    "@witness/features": "1.0.0"
+  }
+}

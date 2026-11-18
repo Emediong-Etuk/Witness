@@ -1,0 +1,11 @@
+{
+  "name": "@witness/lab-recorder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DEV-ONLY corpus recorder: scripted cues, per-clip consent, high-bitrate recording, ground-truth entry. Localhost only. Never packaged.",
+  "dependencies": {
+    "@witness/schema": "1.0.0",
+    "esbuild": "0.28.2"
+  }
+}

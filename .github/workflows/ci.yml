@@ -1,0 +1,37 @@
+name: ci
+on: [push, pull_request]
+permissions:
+  contents: read
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      - run: npm run test:coverage
+      - run: npm run verify
+      - run: npm run lint:compliance
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run build:desktop
+  ui:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build:web
+      - run: npm run build:site
+      - run: npx playwright test --trace off

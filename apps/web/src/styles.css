@@ -1,0 +1,63 @@
+@import 'tailwindcss';
+@import '@witness/ui/fonts.css';
+@import '@witness/ui/tokens.css';
+
+@source '../../../packages/ui/src';
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-raised: var(--raised);
+  --color-raised-2: var(--raised-2);
+  --color-hairline: var(--hairline);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-verified: var(--verified);
+  --color-warming: var(--warming);
+  --color-withheld: var(--withheld);
+  --color-replay: var(--replay);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-mono);
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; border-radius: 6px; }
+::selection { background: color-mix(in oklab, var(--verified) 35%, transparent); }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Faint lab-grid backdrop + slow aurora. Purely decorative. */
+.backdrop {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    radial-gradient(900px 500px at 15% -10%, color-mix(in oklab, var(--verified) 9%, transparent), transparent 70%),
+    radial-gradient(700px 500px at 95% 10%, color-mix(in oklab, var(--replay) 8%, transparent), transparent 70%),
+    linear-gradient(var(--hairline) 1px, transparent 1px),
+    linear-gradient(90deg, var(--hairline) 1px, transparent 1px);
+  background-size: auto, auto, 48px 48px, 48px 48px;
+  mask-image: radial-gradient(ellipse at 50% 0%, #000 30%, transparent 75%);
+  opacity: 0.55;
+}
+.glass { background: color-mix(in oklab, var(--raised) 78%, transparent); backdrop-filter: blur(14px) saturate(1.2); }
+.card { background: var(--raised); border: 1px solid var(--hairline); border-radius: 18px; }
+.card-hover { transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease; }
+.card-hover:hover { transform: translateY(-2px); border-color: color-mix(in oklab, var(--verified) 40%, var(--hairline)); box-shadow: 0 12px 40px -18px color-mix(in oklab, var(--verified) 45%, transparent); }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--hairline); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 10px 18px; font-weight: 500; transition: transform 150ms ease, background 150ms ease, border-color 150ms ease; border: 1px solid var(--hairline); }
+.btn:hover { transform: translateY(-1px); border-color: var(--ink); }
+.btn:active { transform: translateY(0) scale(0.98); }
+.btn-primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn-primary:hover { box-shadow: 0 8px 30px -10px color-mix(in oklab, var(--verified) 60%, transparent); }
+.tbd { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; border-radius: 6px; border: 1px dashed color-mix(in oklab, var(--warming) 70%, transparent); color: var(--warming); font-family: var(--font-mono); font-size: 0.85em; white-space: nowrap; }
+.shine { background: linear-gradient(100deg, var(--ink) 30%, var(--verified) 50%, var(--ink) 70%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 7s ease-in-out infinite; }
+@keyframes shine { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+code, kbd { font-family: var(--font-mono); font-size: 0.92em; }
+kbd { border: 1px solid var(--hairline); border-bottom-width: 2px; border-radius: 6px; padding: 0 6px; background: var(--raised-2); }
