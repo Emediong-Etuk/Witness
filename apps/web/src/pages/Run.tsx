@@ -11,7 +11,7 @@ export function Run() {
         <Reveal className="card card-hover p-6">
           <p className="font-mono text-xs text-verified">A · no setup · 1 min</p>
           <h3 className="mt-1 text-xl font-medium">This site</h3>
-          <p className="mt-2 text-sm text-muted">Watch the videos, play a replay, then run the verifier in your browser.</p>
+          <p className="mt-2 text-sm text-muted">Watch the videos, play a replay, then run the verifier in your browser, at witness-nine.vercel.app.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Link to="/" hash="videos" className="btn py-1.5 text-sm">Videos</Link>
             <Link to="/replay" className="btn py-1.5 text-sm">Replay Lab</Link>
