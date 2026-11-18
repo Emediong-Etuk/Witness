@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync 
 import { join } from 'node:path';
 
 export interface Wrapper {
-  available(): boolean;
-  wrap(raw: Buffer): Buffer;
-  unwrap(wrapped: Buffer): Buffer;
+  available(): Promise<boolean>;
+  wrap(raw: Buffer): Promise<Buffer>;
+  unwrap(wrapped: Buffer): Promise<Buffer>;
 }
 
 interface Envelope {
@@ -27,6 +27,7 @@ export class DataStore<T extends { id: string; startedAt: string }> {
   private readonly dataFile: string;
   private dataKey: Buffer | null = null;
   private memory: T[] | null = null;
+  private queue: Promise<unknown> = Promise.resolve();
   quarantined: string | null = null;
 
   constructor(root: string, private readonly wrapper: Wrapper) {
@@ -35,26 +36,38 @@ export class DataStore<T extends { id: string; startedAt: string }> {
     this.dataFile = join(this.dir, 'history.enc');
   }
 
-  get persistent(): boolean {
+  persistent(): Promise<boolean> {
     return this.wrapper.available();
   }
 
-  private key(): Buffer | null {
+  /** Operations run one at a time, so an await can't interleave two writes. */
+  private serial<R>(fn: () => Promise<R>): Promise<R> {
+    const next = this.queue.then(fn, fn);
+    this.queue = next.catch(() => undefined);
+    return next;
+  }
+
+  private async key(): Promise<Buffer | null> {
     if (this.dataKey) return this.dataKey;
-    if (!this.wrapper.available()) return null;
+    if (!(await this.wrapper.available())) return null;
     mkdirSync(this.dir, { recursive: true, mode: 0o700 });
     if (existsSync(this.keyFile)) {
-      this.dataKey = this.wrapper.unwrap(readFileSync(this.keyFile));
+      this.dataKey = await this.wrapper.unwrap(readFileSync(this.keyFile));
     } else {
-      this.dataKey = randomBytes(32);
-      writeFileSync(this.keyFile, this.wrapper.wrap(this.dataKey), { mode: 0o600 });
+      const k = randomBytes(32);
+      writeFileSync(this.keyFile, await this.wrapper.wrap(k), { mode: 0o600 });
+      this.dataKey = k;
     }
     return this.dataKey;
   }
 
-  list(): T[] {
+  list(): Promise<T[]> {
+    return this.serial(() => this.listNow());
+  }
+
+  private async listNow(): Promise<T[]> {
     if (this.memory) return this.memory;
-    const k = this.key();
+    const k = await this.key();
     if (!k || !existsSync(this.dataFile)) return (this.memory = []);
     try {
       const env = JSON.parse(readFileSync(this.dataFile, 'utf8')) as Envelope;
@@ -71,9 +84,9 @@ export class DataStore<T extends { id: string; startedAt: string }> {
     }
   }
 
-  private write(items: T[]): void {
+  private async write(items: T[]): Promise<void> {
     this.memory = items;
-    const k = this.key();
+    const k = await this.key();
     if (!k) return; // memory only
     const iv = randomBytes(12);
     const c = createCipheriv('aes-256-gcm', k, iv);
@@ -84,27 +97,33 @@ export class DataStore<T extends { id: string; startedAt: string }> {
     renameSync(tmp, this.dataFile);
   }
 
-  save(item: T): void {
-    const items = this.list().filter((x) => x.id !== item.id);
-    items.push(item);
-    items.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-    this.write(items);
+  save(item: T): Promise<void> {
+    return this.serial(async () => {
+      const items = (await this.listNow()).filter((x) => x.id !== item.id);
+      items.push(item);
+      items.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+      await this.write(items);
+    });
   }
 
   /** Drop records older than `days`. Returns how many were removed. */
-  purge(days: number, now = Date.now()): number {
-    const cut = now - days * 86_400_000;
-    const items = this.list();
-    const keep = items.filter((x) => Date.parse(x.startedAt) >= cut);
-    if (keep.length !== items.length) this.write(keep);
-    return items.length - keep.length;
+  purge(days: number, now = Date.now()): Promise<number> {
+    return this.serial(async () => {
+      const cut = now - days * 86_400_000;
+      const items = await this.listNow();
+      const keep = items.filter((x) => Date.parse(x.startedAt) >= cut);
+      if (keep.length !== items.length) await this.write(keep);
+      return items.length - keep.length;
+    });
   }
 
   /** Remove everything and verify it is gone. */
-  deleteAll(): boolean {
-    this.memory = null;
-    this.dataKey = null;
-    rmSync(this.dir, { recursive: true, force: true });
-    return !existsSync(this.dir);
+  deleteAll(): Promise<boolean> {
+    return this.serial(async () => {
+      this.memory = null;
+      this.dataKey = null;
+      rmSync(this.dir, { recursive: true, force: true });
+      return !existsSync(this.dir);
+    });
   }
 }

@@ -10,9 +10,9 @@ import { CheckinSchema, KeySchema, type Checkin } from '../src/shared/ipc-schema
 
 /** Stand-in for safeStorage: XOR "wrap" so tests can tell wrapped from raw. */
 const fakeWrap = (available = true): Wrapper => ({
-  available: () => available,
-  wrap: (b) => Buffer.from(b.map((x) => x ^ 0x5a)),
-  unwrap: (b) => Buffer.from(b.map((x) => x ^ 0x5a)),
+  available: async () => available,
+  wrap: async (b) => Buffer.from(b.map((x) => x ^ 0x5a)),
+  unwrap: async (b) => Buffer.from(b.map((x) => x ^ 0x5a)),
 });
 
 async function realCheckin(scenario: 'clean' | 'talking' = 'clean'): Promise<CheckinRecord> {
@@ -39,9 +39,9 @@ describe('DataStore (encrypted history)', () => {
     const root = mkdtempSync(join(tmpdir(), 'witness-'));
     const s = new DataStore<Checkin>(root, fakeWrap());
     const rec = CheckinSchema.parse(await realCheckin());
-    s.save(rec);
+    await s.save(rec);
     const s2 = new DataStore<Checkin>(root, fakeWrap());
-    expect(s2.list()).toEqual([rec]);
+    expect(await s2.list()).toEqual([rec]);
     for (const f of readdirSync(join(root, 'witness-data'))) {
       const raw = readFileSync(join(root, 'witness-data', f), 'utf8');
       expect(raw).not.toContain('pulse');
@@ -53,28 +53,28 @@ describe('DataStore (encrypted history)', () => {
     const root = mkdtempSync(join(tmpdir(), 'witness-'));
     const s = new DataStore<Checkin>(root, fakeWrap());
     const base = CheckinSchema.parse(await realCheckin());
-    s.save({ ...base, id: 'ses_old_one', startedAt: new Date(Date.now() - 40 * 86_400_000).toISOString() });
-    s.save({ ...base, id: 'ses_new_one', startedAt: new Date().toISOString() });
-    expect(s.purge(30)).toBe(1);
-    expect(s.list().map((x) => x.id)).toEqual(['ses_new_one']);
-    expect(s.deleteAll()).toBe(true);
+    await s.save({ ...base, id: 'ses_old_one', startedAt: new Date(Date.now() - 40 * 86_400_000).toISOString() });
+    await s.save({ ...base, id: 'ses_new_one', startedAt: new Date().toISOString() });
+    expect(await s.purge(30)).toBe(1);
+    expect((await s.list()).map((x) => x.id)).toEqual(['ses_new_one']);
+    expect(await s.deleteAll()).toBe(true);
     expect(existsSync(join(root, 'witness-data'))).toBe(false);
-    expect(new DataStore<Checkin>(root, fakeWrap()).list()).toEqual([]);
+    expect(await new DataStore<Checkin>(root, fakeWrap()).list()).toEqual([]);
   });
-  it('a corrupted file is quarantined, not crashed on', () => {
+  it('a corrupted file is quarantined, not crashed on', async () => {
     const root = mkdtempSync(join(tmpdir(), 'witness-'));
     const s = new DataStore<Checkin>(root, fakeWrap());
-    s.list();
+    await s.list();
     writeFileSync(join(root, 'witness-data', 'history.enc'), '{"v":1,"iv":"AAAA","tag":"AAAA","data":"AAAA"}');
     const s2 = new DataStore<Checkin>(root, fakeWrap());
-    expect(s2.list()).toEqual([]);
+    expect(await s2.list()).toEqual([]);
     expect(s2.quarantined).toMatch(/corrupt/);
   });
   it('without OS encryption it keeps history in memory only', async () => {
     const root = mkdtempSync(join(tmpdir(), 'witness-'));
     const s = new DataStore<Checkin>(root, fakeWrap(false));
-    s.save(CheckinSchema.parse(await realCheckin()));
-    expect(s.list()).toHaveLength(1);
+    await s.save(CheckinSchema.parse(await realCheckin()));
+    expect(await s.list()).toHaveLength(1);
     expect(existsSync(join(root, 'witness-data'))).toBe(false);
   });
 });

@@ -27,9 +27,9 @@ function parse<T>(schema: z.ZodType<T>, raw: unknown): T {
 }
 
 export const safeStorageWrapper = {
-  available: () => safeStorage.isEncryptionAvailable(),
-  wrap: (raw: Buffer) => safeStorage.encryptString(raw.toString('base64')),
-  unwrap: (w: Buffer) => Buffer.from(safeStorage.decryptString(w), 'base64'),
+  available: () => safeStorage.isAsyncEncryptionAvailable(),
+  wrap: (raw: Buffer) => safeStorage.encryptStringAsync(raw.toString('base64')),
+  unwrap: async (w: Buffer) => Buffer.from((await safeStorage.decryptStringAsync(w)).result, 'base64'),
 };
 
 export interface Deps {
@@ -52,7 +52,7 @@ export function registerIpc(d: Deps): void {
     });
 
   let lastKeyRead = 0;
-  handle('key:status', () => ({ ...d.keys.status(), encryptionAvailable: d.keys.encryptionAvailable }));
+  handle('key:status', async () => ({ ...d.keys.status(), encryptionAvailable: await d.keys.encryptionAvailable() }));
   handle('key:set', (_e, key, allowPlain) => d.keys.set(parse(KeySchema, key), allowPlain === true));
   handle('key:clear', () => {
     d.keys.clear();
@@ -66,22 +66,22 @@ export function registerIpc(d: Deps): void {
     lastKeyRead = now;
     return d.keys.get();
   });
-  handle('store:save', (_e, rec) => {
-    d.store.save(parse(CheckinSchema, rec));
+  handle('store:save', async (_e, rec) => {
+    await d.store.save(parse(CheckinSchema, rec));
     return true;
   });
-  handle('store:list', () => ({ items: d.store.list(), persistent: d.store.persistent, quarantined: d.store.quarantined }));
-  handle('store:exportAll', () => JSON.stringify({ exportedAt: new Date().toISOString(), settings: d.settings.get(), checkins: d.store.list() }, null, 2));
-  handle('store:deleteAll', () => {
-    const okStore = d.store.deleteAll();
+  handle('store:list', async () => ({ items: await d.store.list(), persistent: await d.store.persistent(), quarantined: d.store.quarantined }));
+  handle('store:exportAll', async () => JSON.stringify({ exportedAt: new Date().toISOString(), settings: d.settings.get(), checkins: await d.store.list() }, null, 2));
+  handle('store:deleteAll', async () => {
+    const okStore = await d.store.deleteAll();
     d.keys.clear();
     d.settings.clear();
     return okStore && !d.keys.status().encrypted;
   });
   handle('settings:get', () => d.settings.get());
-  handle('settings:set', (_e, patch) => {
+  handle('settings:set', async (_e, patch) => {
     const next = d.settings.set(parse(SettingsSchema.partial(), patch));
-    d.store.purge(next.retentionDays);
+    await d.store.purge(next.retentionDays);
     return next;
   });
   handle('open:external', (_e, id) => openExternal(parse(ExternalIdSchema, id)));
