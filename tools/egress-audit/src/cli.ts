@@ -4,7 +4,8 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runAudit, type AuditResult } from './audit.js';
-import { MATRIX, renderEgress, replaceBetween } from './report.js';
+import { EGRESS_MARKERS, renderEgress, replaceBetween } from '@witness/bench-core';
+import { MATRIX } from './matrix.js';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const OUT = join(REPO, 'bench/out/egress');
@@ -17,7 +18,7 @@ const opt = (n: string) => {
   return i >= 0 ? head[i + 1] : undefined;
 };
 const flag = (n: string) => head.includes(`--${n}`);
-const MARK = ['<!-- egress:table:start -->', '<!-- egress:table:end -->'] as const;
+const MARK = EGRESS_MARKERS;
 
 async function main() {
   const cmd = head[0];

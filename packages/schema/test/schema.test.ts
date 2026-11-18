@@ -21,3 +21,17 @@ describe('schemas agree with the gate', () => {
     expect(GateEventSchema.safeParse({ kind: 'blink', t: 0, detected: true, x: 1 }).success).toBe(false);
   });
 });
+
+import { syntheticTrace } from '@witness/sdk-adapter';
+import { TraceLineSchema } from '../src/index.js';
+
+describe('trace line schema', () => {
+  it('accepts every synthetic trace line', () => {
+    for (const l of syntheticTrace('talking', { mode: 'full', durS: 5 })) expect(TraceLineSchema.safeParse(l).success).toBe(true);
+  });
+  it('rejects coordinates or expressions smuggled into a trace', () => {
+    expect(TraceLineSchema.safeParse({ type: 'face_feature', t: 1, motion: 0, mouth: 0, jaw: 1, points: [{ x: 1, y: 2 }] }).success).toBe(false);
+    expect(TraceLineSchema.safeParse({ type: 'face', t: 1, talking: false, blinking: false, landmarksReset: false, expression: 'happy' }).success).toBe(false);
+    expect(TraceLineSchema.safeParse({ type: 'landmarks', t: 1 }).success).toBe(false);
+  });
+});

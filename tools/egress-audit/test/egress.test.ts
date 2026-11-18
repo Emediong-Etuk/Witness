@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { aggregateHits, runAudit, type AuditResult } from '../src/audit.js';
 import { descendants, isLoopback, parseLsof, parsePs, parseSs, parseWindowsJson, splitEndpoint } from '../src/parse.js';
 import { startLoggingProxy } from '../src/proxy.js';
-import { MATRIX, renderEgress, replaceBetween } from '../src/report.js';
+import { renderEgress, replaceBetween } from '@witness/bench-core';
+import { MATRIX } from '../src/matrix.js';
 
 describe('socket-table parsers', () => {
   it('splitEndpoint handles v4, bracketed v6 and wildcards', () => {

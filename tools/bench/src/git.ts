@@ -2,13 +2,9 @@ import { execFileSync } from 'node:child_process';
 
 const git = (args: string[], cwd: string) => execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
 
-export interface FreezeStatus {
-  frozen: boolean;
-  reason: string;
-  tag: string;
-  tagCommit: string | null;
-  head: string | null;
-}
+import type { FreezeStatus } from '@witness/bench-core';
+
+export type { FreezeStatus };
 
 /**
  * Thresholds must be frozen (tag m4-thresholds-frozen) before the held-out

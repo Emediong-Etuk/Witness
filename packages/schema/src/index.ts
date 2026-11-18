@@ -77,6 +77,33 @@ export const SessionLogLineSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('session_end'), ...lineBase, chainHead: hash, receiptChainHead: hash }).strict(),
 ]);
 
+/** Trace lines (corpus/traces/*.jsonl, without the chain field `h`). Strict: unknown fields such as coordinates are rejected. */
+const num = z.number().finite();
+export const SourceEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('status'), t, status: z.number().int() }).strict(),
+  z.object({ type: z.literal('validation'), t, code: z.number().int().min(0).max(64), hint: z.string().max(256) }).strict(),
+  z.object({ type: z.literal('rate'), t, metric, value: num, confidence: num, stable: z.boolean() }).strict(),
+  z.object({ type: z.literal('face'), t, talking: z.boolean().nullable(), blinking: z.boolean().nullable(), landmarksReset: z.boolean() }).strict(),
+  z.object({ type: z.literal('face_feature'), t, motion: nullableNum, mouth: nullableNum, jaw: nullableNum }).strict(),
+  z.object({ type: z.literal('frame'), t, bg: z.tuple([num, num]), chest: nullableNum, face: nullableNum }).strict(),
+  z.object({ type: z.literal('trace'), t, kind: z.enum(['pulse', 'chest']), value: num }).strict(),
+  z.object({ type: z.literal('error'), t, code: z.number().int(), message: z.string().max(512), retryable: z.boolean() }).strict(),
+  z.object({ type: z.literal('end'), t }).strict(),
+]);
+
+export const TraceHeaderSchema = z.object({
+  type: z.literal('header'),
+  v: z.literal(1),
+  source: z.string().regex(/^(corpus|stub|synthetic):[A-Za-z0-9_-]+$/),
+  synthetic: z.boolean(),
+  sdkVersion: z.string().max(40),
+  mode: z.enum(['quick', 'full']),
+  note: z.string().max(400).optional(),
+  meta: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(z.string())])).optional(),
+}).strict();
+
+export const TraceLineSchema = z.union([TraceHeaderSchema, SourceEventSchema]);
+
 export const ConditionSchema = z.enum([
   'baseline', 'talking', 'chewing', 'motion', 'flicker', 'tv_light', 'generator_light', 'photo',
   'second_person', 'paced_breathing', 'exercise', 'low_light', 'dark_clothing',

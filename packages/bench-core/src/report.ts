@@ -1,10 +1,23 @@
 import { configHash, type GateConfig, type Metric, type Receipt, type RuleId } from '@witness/gate';
 import type { Condition, ManifestClip } from '@witness/schema';
-import type { ClipTrace } from './calibrate.js';
-import type { FreezeStatus } from './git.js';
-import { isContaminated } from './manifest.js';
+import type { TraceLine } from '@witness/sdk-adapter';
+import { isContaminated } from './contamination.js';
 import { replayTrace } from './replay.js';
 import { clusterBootstrap, mae, mean, quantile, round, share, type Ci } from './stats.js';
+
+export interface ClipTrace {
+  clip: ManifestClip;
+  lines: TraceLine[];
+  traceSha256: string;
+}
+
+export interface FreezeStatus {
+  frozen: boolean;
+  reason: string;
+  tag: string;
+  tagCommit: string | null;
+  head: string | null;
+}
 
 export const DEFINITIONS = {
   reading: 'An SDK rate sample (pulse rate, breathing rate or HRV RMSSD) with stable === true.',
@@ -14,6 +27,8 @@ export const DEFINITIONS = {
   sdkFalseTrust: 'contaminated readings / all readings.',
   witnessFAR: 'contaminated readings that Witness VERIFIED / contaminated readings.',
   witnessFRR: 'clean readings that Witness WITHHELD / clean readings.',
+  witnessWithheldContaminated: 'contaminated readings that Witness WITHHELD / contaminated readings.',
+  cleanVerified: 'clean readings that Witness VERIFIED / clean readings.',
   accuracy:
     'Absolute error of the reported value vs the mean ground truth over the same window (fingertip oximeter for pulse; oximeter-free paced-breathing rate or logged breathing for breathing). Share within ±3 bpm (pulse) / ±1 br/min (breathing).',
   ci: '95% cluster-bootstrap interval resampling whole clips (2000 resamples, fixed seed). The corpus is small, so intervals are wide.',
@@ -85,6 +100,7 @@ export function buildReport({ traces, cfg, freeze, gitHead }: ReportInput) {
       clean: clean.length,
       sdkFalseTrust: ci(rs, rate((x) => x.contaminated.length > 0)),
       witnessFAR: ci(cont, rate((x) => x.r.verdict === 'VERIFIED')),
+      witnessWithheldContaminated: ci(cont, rate((x) => x.r.verdict === 'WITHHELD')),
       witnessFRR: ci(clean, rate((x) => x.r.verdict === 'WITHHELD')),
       cleanVerified: ci(clean, rate((x) => x.r.verdict === 'VERIFIED')),
     };

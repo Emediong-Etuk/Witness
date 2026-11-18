@@ -11,8 +11,8 @@ import { freezeStatus } from './git.js';
 import { consentedClip, loadManifest } from './manifest.js';
 import { defaultPaths, REPO } from './paths.js';
 import { recordClip } from './record.js';
-import { buildReport, renderTables } from './report.js';
-import { replayTrace } from './replay.js';
+import { buildReport, encodeReceipts, fillMarkers, renderTables, replayTrace } from '@witness/bench-core';
+import { configHash } from '@witness/gate';
 import { apiKeyFromEnv, realSdk } from './sdk-node.js';
 import { readTrace } from './trace-io.js';
 
@@ -43,6 +43,18 @@ export function loadTraces(m: Manifest, tracesDir: string, split: 'calibration' 
     out.push({ clip, lines: t.lines, traceSha256: t.sha256 });
   }
   return out;
+}
+
+const MARKER_DOCS = ['README.md', 'docs/TEST_REPORT.md'];
+function fillDocs(results: unknown | null) {
+  for (const rel of MARKER_DOCS) {
+    const f = join(REPO, rel);
+    if (!existsSync(f)) continue;
+    const before = readFileSync(f, 'utf8');
+    const after = fillMarkers(before, results);
+    if (after !== before) writeFileSync(f, after);
+    console.log(`  ${rel}: numbers ${results ? 'filled from results.json' : 'set to TBD'}`);
+  }
 }
 
 function gitHead(): string | null {
@@ -95,14 +107,28 @@ async function main() {
     case 'replay': {
       const cfg = loadConfig();
       const out: Record<string, unknown>[] = [];
+      const write = flag('write');
       for (const split of ['calibration', 'heldout'] as const) {
         for (const t of loadTraces(m, P.traces, split)) {
           const rep = replayTrace(t.lines, cfg);
+          if (write) {
+            mkdirSync(P.receipts, { recursive: true });
+            const header = { type: 'receipts_header' as const, v: 1 as const, clipId: t.clip.id, traceSha256: t.traceSha256, gateVersion: cfg.version, gateConfigHash: configHash(cfg), count: rep.receipts.length, chainHead: rep.chainHead };
+            writeFileSync(join(P.receipts, `${t.clip.id}.jsonl`), encodeReceipts(header, rep.receipts));
+          }
           const v = (k: string) => rep.receipts.filter((r) => r.verdict === k).length;
           out.push({ id: t.clip.id, split, receipts: rep.receipts.length, verified: v('VERIFIED'), withheld: v('WITHHELD'), warming: v('WARMING_UP'), outOfRange: v('OUT_OF_RANGE'), chainHead: rep.chainHead });
         }
       }
       console.table(out);
+      if (write) console.log(`Wrote receipts to ${relative(REPO, P.receipts)}/`);
+      return;
+    }
+    case 'docs': {
+      // Refill every embedded number from bench/out/results.json (or TBD placeholders if absent).
+      const f = join(P.out, 'results.json');
+      const results = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null;
+      fillDocs(results);
       return;
     }
     case 'calibrate': {
@@ -131,11 +157,12 @@ async function main() {
       writeFileSync(join(dir, 'results.json'), JSON.stringify(results, null, 2) + '\n');
       writeFileSync(join(dir, 'tables.md'), renderTables(results));
       console.log(renderTables(results));
+      if (dir === P.out) fillDocs(results);
       console.log(`Wrote ${relative(REPO, join(dir, 'results.json'))}`);
       return;
     }
     default:
-      console.log('usage: bench <estimate|record|replay|calibrate|report> [options]');
+      console.log('usage: bench <estimate|record|replay [--write]|calibrate [--write]|report|docs> [options]');
       process.exitCode = 1;
   }
 }

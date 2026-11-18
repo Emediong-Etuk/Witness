@@ -134,3 +134,46 @@ Facts confirmed from the package itself:
 - SDK reproducibility (2 clips × 3 runs) ≈ 7.5 min;
 - total for everything ≈ 55–65 min.
 - **ASK GREG:** check remaining credits (portal or MCP `usage.get_plan`) before any of these runs. Anything over 25% of what's left needs his OK.
+
+---
+
+## 2026-11-18, ~18:40–19:40 WAT · Block 4: verify command
+
+**Credits used:** 0.
+
+**Built:**
+- **`packages/bench-core`:** the pure, browser-safe parts of the bench, moved out of `tools/`:
+  - trace and receipt codecs (via `@noble/hashes`);
+  - contamination labels;
+  - replay and stats;
+  - the report;
+  - doc markers (`<!-- bench:path|format -->…<!-- /bench -->`);
+  - egress table rendering.
+- **`packages/schema`:** strict `TraceLineSchema`.
+- **`packages/verify`:** `verifyAll()` and `verifyCheckins()`. The checks are listed in ARCHITECTURE.md.
+- **`tools/verify`:** the `npm run verify` CLI, the `npx witness-verify [corpus/]` bin and `verify checkin <file>`. It reads git to check the freeze order.
+- **`bench:replay --write`** stores receipts; `bench:report` fills the doc markers; `bench:docs` refills them.
+- **README:** the §3 headline's measured line is now made of markers showing TBD. `docs/TEST_REPORT.md` has a skeleton with 12 markers.
+- CI runs `npm run verify`.
+
+**Finding (determinism):** verify's first run on the test fixture failed `receipts.*`, and it was right to. Traces are stored as canonical JSON (floats rounded to 6 decimals), so receipts computed from in-memory lines differ in the 6th decimal of R9 observations from receipts computed from the published file. The real pipeline already computes receipts from the file. This is now a stated rule in `tools/bench/README.md`, and the fixture mirrors it.
+
+**Measured (this block):**
+- `npx vitest run`: all tests pass (count in the commit message).
+- `npm run verify` on this repo: OK. It reports 0 traces (none recorded yet) and 17 embedded numbers, all of them TBD placeholders.
+- The verify core bundles with Vite for the browser with no Node shims, and in Chromium it recomputed 15/15 receipts of a test trace and matched them.
+- Tamper tests: each tampered case fails its named check. Cases covered:
+  - a trace line;
+  - the manifest pin;
+  - a stored receipt;
+  - a threshold;
+  - a result number;
+  - a doc number;
+  - a typed number where TBD is required;
+  - an unknown marker path;
+  - unfrozen results;
+  - a freeze after the held-out run;
+  - an unlisted trace;
+  - a missing trace or receipts file;
+  - a hand-edited egress table;
+  - export value/hash/config forgery.

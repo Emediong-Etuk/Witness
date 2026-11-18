@@ -1,13 +1,32 @@
-import type { AuditResult } from './audit.js';
+/** Shape of one egress audit run (tools/egress-audit writes these). */
+export interface AuditResult {
+  v: 1;
+  kind: 'witness-egress-audit';
+  label: string;
+  config: Record<string, unknown>;
+  startedAt: string;
+  durationS: number;
+  platform: string;
+  sampler: string;
+  intervalMs: number;
+  samples: number;
+  sampleErrors: number;
+  maxPids: number;
+  remotes: { proto: 'tcp' | 'udp'; ip: string; port: number; hostnames: string[]; firstS: number; lastS: number; seen: number; states: string[] }[];
+  proxy: { used: boolean; connects: { host: string; port: number; kind: string; firstS: number; lastS: number; count: number }[] };
+  exitCode: number | null;
+  probe: unknown;
+  limitations: string[];
+}
 
-/** The §7.6 / §13.7 configurations, fixed before any run. */
-export const MATRIX = [
-  { label: 'a-full-telemetry-off-listener-on', mode: 'full', telemetry: 'off', listener: 'on', purpose: '§7.6 test (a): count unrequested insights' },
-  { label: 'b-full-telemetry-off-listener-off', mode: 'full', telemetry: 'off', listener: 'off', purpose: '§7.6 test (b): does traffic change without a listener?' },
-  { label: 'c-quick-telemetry-off-listener-on', mode: 'quick', telemetry: 'off', listener: 'on', purpose: '§7.6 test (c): no breathing requested' },
-  { label: 'd-full-telemetry-on-listener-on', mode: 'full', telemetry: 'on', listener: 'on', purpose: 'telemetry endpoint(s)' },
-  { label: 'e-quick-telemetry-on-listener-on', mode: 'quick', telemetry: 'on', listener: 'on', purpose: 'telemetry, quick' },
-] as const;
+export const EGRESS_MARKERS = ['<!-- egress:table:start -->', '<!-- egress:table:end -->'] as const;
+
+export function extractBetween(doc: string, start: string, end: string): string | null {
+  const i = doc.indexOf(start), j = doc.indexOf(end);
+  if (i < 0 || j < 0 || j < i) return null;
+  return doc.slice(i + start.length + 1, j);
+}
+
 
 const host = (r: AuditResult['remotes'][number]) => (r.hostnames[0] ? `${r.hostnames[0]} (${r.ip})` : r.ip);
 

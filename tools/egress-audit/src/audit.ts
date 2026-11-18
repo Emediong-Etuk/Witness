@@ -17,25 +17,10 @@ export interface Remote {
   states: string[];
 }
 
-export interface AuditResult {
-  v: 1;
-  kind: 'witness-egress-audit';
-  label: string;
-  config: Record<string, unknown>;
-  startedAt: string;
-  durationS: number;
-  platform: string;
-  sampler: string;
-  intervalMs: number;
-  samples: number;
-  sampleErrors: number;
-  maxPids: number;
-  remotes: Remote[];
-  proxy: { used: boolean; connects: { host: string; port: number; kind: string; firstS: number; lastS: number; count: number }[] };
-  exitCode: number | null;
-  probe: unknown;
-  limitations: string[];
-}
+import type { AuditResult } from '@witness/bench-core';
+
+export type { AuditResult };
+
 
 export interface AuditOptions {
   label: string;

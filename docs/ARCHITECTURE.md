@@ -80,3 +80,27 @@ Replay uses the same path from `SourceEvent` downward, which is why the UI tests
   - a forehead patch.
 - We use the canvas path because it's robust across pixel formats. The `copyTo(rect)` route the prompt prefers is a possible optimisation.
 - The worker reports its own per-frame cost (`workMs`) for the §4.2 performance budget. It hasn't been measured yet because it needs a real camera.
+
+## Verification (§9.3)
+
+`packages/verify` is pure: no Node APIs, and it bundles for the browser as-is. It is shared by the CLI (`npm run verify`, `npx witness-verify corpus/`), CI, and the judge site's in-browser Verify page. It checks:
+
+| Check | Fails when |
+| --- | --- |
+| `manifest` | the manifest doesn't match `ManifestSchema`. Consent attestation is required by the schema. |
+| `trace.<id>.chain` | any line's running hash doesn't recompute |
+| `trace.<id>.pinned` | the trace's SHA-256 differs from `manifest.sha256.trace`, or isn't pinned |
+| `trace.<id>.schema` | any line isn't a strict `TraceLineSchema` line (coordinates, frames and expressions are rejected) |
+| `trace.<id>.source` | the trace isn't a `corpus:<id>` recording. Synthetic and stub traces can never sit in the corpus. |
+| `receipts.<id>` | the gate re-run on the trace doesn't reproduce the stored receipts byte for byte, or the stored receipts fail their own hashes or chain links, or were made with another config or trace |
+| `results` | `bench/out/results.json` isn't reproduced exactly from the held-out traces, was computed from unfrozen thresholds or synthetic data, or uses another gate config |
+| `git.freeze` (CLI only) | the `m4-thresholds-frozen` tag is missing, isn't an ancestor of HEAD, the config changed since it, or it isn't an ancestor of `m5-heldout` |
+| `docs.<file>` | any number between `<!-- bench:path\|format -->` markers differs from `results.json`. Before results exist, the only allowed content is `TBD (run npm run bench:report)`. |
+| `docs.EGRESS.md` | the egress table differs from `bench/out/egress/*.json` |
+
+`npm run verify -- checkin <export.json>` checks an exported check-in:
+- each receipt's hash;
+- that the shown value equals the receipt value;
+- that the verdict follows from its checks under a published gate config.
+
+**Limit:** an export carries final receipts only, not their inputs, so the gate can't be re-run on it.

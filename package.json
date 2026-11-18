@@ -29,7 +29,9 @@
     "bench:report": "tsx tools/bench/src/cli.ts report",
     "egress": "tsx tools/egress-audit/src/cli.ts",
     "egress:matrix": "tsx tools/egress-audit/src/cli.ts matrix",
-    "egress:report": "tsx tools/egress-audit/src/cli.ts report"
+    "egress:report": "tsx tools/egress-audit/src/cli.ts report",
+    "verify": "tsx tools/verify/src/cli.ts",
+    "bench:docs": "tsx tools/bench/src/cli.ts docs"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

@@ -10,8 +10,7 @@ import { calibrate, type ClipTrace } from '../src/calibrate.js';
 import { freezeStatus } from '../src/git.js';
 import { consentedClip, isContaminated } from '../src/manifest.js';
 import { recordClip } from '../src/record.js';
-import { buildReport, groundTruth, renderTables } from '../src/report.js';
-import { replayTrace } from '../src/replay.js';
+import { buildReport, groundTruth, renderTables, replayTrace } from '@witness/bench-core';
 import type { NodeSdkLike, SdkFactory } from '../src/sdk-node.js';
 import { ChainError, readTrace, writeTrace } from '../src/trace-io.js';
 

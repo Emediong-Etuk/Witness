@@ -1,15 +1,8 @@
 import type { GateConfig, Metric, Receipt, RuleId } from '@witness/gate';
-import type { ManifestClip, Condition } from '@witness/schema';
-import type { TraceLine } from '@witness/sdk-adapter';
-import { isContaminated } from './manifest.js';
-import { replayTrace } from './replay.js';
-import { quantile, round } from './stats.js';
+import type { Condition } from '@witness/schema';
+import { isContaminated, quantile, replayTrace, round, type ClipTrace } from '@witness/bench-core';
 
-export interface ClipTrace {
-  clip: ManifestClip;
-  lines: TraceLine[];
-  traceSha256: string;
-}
+export type { ClipTrace };
 
 /** Methods fixed before any data is seen (BUILD_PROMPT §5.1). */
 export const METHOD = {

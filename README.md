@@ -6,6 +6,14 @@ Witness shows a pulse, breathing rate or HRV value only when the **entire** anal
 
 General wellness information, not medical advice.
 
+## The problem
+
+**SmartSpectra turns 12 s of video into a pulse, 30 s into a breathing rate and 60 s into HRV, and its own model cards warn that motion, chewing and flickering light can produce wrong values *with high confidence*. Only motion has one of its 14 warning codes, so an app that trusts `stable` can show a contaminated reading as reliable.**
+
+On our <!-- bench:clips.length|int -->TBD (run npm run bench:report)<!-- /bench -->-clip held-out corpus, <!-- bench:overall.sdkFalseTrust|ci-pct -->TBD (run npm run bench:report)<!-- /bench --> of readings the SDK marked `stable` had a documented-invalid condition inside their window (<!-- bench:accuracy.pulse.sdkStableContaminated.mae|ci-num1 -->TBD (run npm run bench:report)<!-- /bench --> bpm mean error vs a fingertip oximeter). Witness withheld <!-- bench:overall.witnessWithheldContaminated|ci-pct -->TBD (run npm run bench:report)<!-- /bench --> of those and kept <!-- bench:overall.cleanVerified|ci-pct -->TBD (run npm run bench:report)<!-- /bench --> of the clean ones.
+
+<sub>Every number above is rendered from `bench/out/results.json` by `npm run bench:report`. `npm run verify` recomputes them from the published traces and fails if any differs. Brackets are 95% clip-level bootstrap intervals.</sub>
+
 ## Status
 
 - `packages/features`: pure DSP and landmark/ROI features ✅
@@ -15,7 +23,8 @@ General wellness information, not medical advice.
 - `apps/desktop`: Electron shell + renderer ✅ (built; first real camera run pending)
 - `tools/egress-audit`: socket sampler + logging proxy + headless SDK probe ✅ (no real runs yet)
 - `tools/bench`: record / replay / calibrate / report ✅ (no real clips yet; held-out report locked until thresholds are frozen)
-- Verify CLI, lab recorder, packaging, judge site: not started
+- `tools/verify` (`npm run verify`, `npx witness-verify corpus/`): recomputes every chain, receipt, result and embedded number ✅
+- Lab recorder, packaging, judge site: not started
 
 Requires Node 24 (npm ≥ 11).
 
@@ -25,6 +34,7 @@ npm test                 # unit + property tests
 npm run typecheck
 npm run build:web        # renderer in the browser, replay only
 npx playwright test      # UI tests on synthetic replays (no camera, no key)
+npm run verify           # recompute every receipt, chain head, result and embedded number (no key, no credits)
 ```
 
 Desktop app from source (your own machine, with a camera):
