@@ -81,17 +81,49 @@ export async function listCameras(): Promise<{ id: string; label: string }[]> {
     .map((d, i) => ({ id: d.deviceId, label: d.label || `Camera ${i + 1}` }));
 }
 
-/** Same request as the SDK's own default, plus an optional chosen device. Video only. */
-export function openCamera(deviceId: string | null): Promise<MediaStream> {
+export interface CaptureProfile { width: number; height: number; label: string; requireFps?: number }
+
+/**
+ * The SDK's own default first, then lower resolutions. Many webcams reach
+ * 30 fps at 1280×720 only in a compressed format and fall to 10–16 fps
+ * otherwise, while 640×480 runs at full rate. Lower profiles ask the browser
+ * for a capture mode that can do at least the SDK's floor.
+ */
+export const PROFILES: CaptureProfile[] = [
+  { width: 1280, height: 720, label: '1280×720' },
+  { width: 640, height: 480, label: '640×480', requireFps: 25 },
+  { width: 640, height: 360, label: '640×360', requireFps: 25 },
+];
+
+/** Video only, optionally on a chosen device. */
+export function openCamera(deviceId: string | null, profile: CaptureProfile = PROFILES[0]!): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia({
     audio: false,
     video: {
       ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' }),
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-      frameRate: { ideal: 30 },
+      width: { ideal: profile.width },
+      height: { ideal: profile.height },
+      frameRate: profile.requireFps ? { ideal: 30, min: profile.requireFps } : { ideal: 30 },
     },
   });
+}
+
+/**
+ * Pure: the first profile whose sample passes, else the best one tried.
+ * A black picture is never fixed by resolution, so it stops the search.
+ */
+export function pickProfile(tried: { profile: CaptureProfile; sample: CameraSample }[]): { index: number; verdict: CameraVerdict } | null {
+  if (!tried.length) return null;
+  const verdicts = tried.map((t) => assessCamera(t.sample));
+  const good = verdicts.findIndex((v) => v.ok && v.level === 'good');
+  if (good >= 0) return { index: good, verdict: verdicts[good]! };
+  const ok = verdicts.findIndex((v) => v.ok);
+  if (ok >= 0) return { index: ok, verdict: verdicts[ok]! };
+  let best = 0;
+  tried.forEach((t, i) => {
+    if ((t.sample.fps ?? 0) > (tried[best]!.sample.fps ?? 0)) best = i;
+  });
+  return { index: best, verdict: verdicts[best]! };
 }
 
 type Mstp = new (o: { track: MediaStreamTrack }) => { readable: ReadableStream<VideoFrame> };

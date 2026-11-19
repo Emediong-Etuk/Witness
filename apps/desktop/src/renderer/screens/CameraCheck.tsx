@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { assessCamera, listCameras, openCamera, sampleCamera, saveCameraId, savedCameraId, type CameraVerdict } from '../camera-check';
+import {
+  assessCamera, listCameras, openCamera, pickProfile, PROFILES, sampleCamera, saveCameraId, savedCameraId,
+  type CameraSample, type CameraVerdict, type CaptureProfile,
+} from '../camera-check';
 import { t } from '../strings';
 
 type State =
   | { s: 'opening' }
-  | { s: 'sampling'; p: number }
-  | { s: 'done'; v: CameraVerdict }
+  | { s: 'sampling'; p: number; label: string }
+  | { s: 'done'; v: CameraVerdict; note: string | null }
   | { s: 'error'; message: string };
 
 /**
@@ -33,36 +36,69 @@ export function CameraCheck(p: { onReady: (stream: MediaStream, healthy: boolean
     setState({ s: 'opening' });
     stopStream(streamRef.current);
     setStream(null);
-    let st: MediaStream;
-    try {
-      st = await openCamera(id);
-    } catch (e) {
-      const name = (e as DOMException).name;
-      if (name === 'OverconstrainedError' && id) {
-        // The saved camera is gone: fall back to the default one.
-        saveCameraId(null);
-        setCameraId(null);
-        return check(null);
+    const tried: { profile: CaptureProfile; sample: CameraSample }[] = [];
+    let st: MediaStream | null = null;
+    let open: CaptureProfile | null = null;
+    let attempts = 0;
+    for (const [i, profile] of PROFILES.entries()) {
+      attempts++;
+      try {
+        st = await openCamera(id, profile);
+        open = profile;
+      } catch (e) {
+        const name = (e as DOMException).name;
+        if (i > 0) continue; // this camera has no such mode: try the next one
+        if (name === 'OverconstrainedError' && id) {
+          // The saved camera is gone: fall back to the default one.
+          saveCameraId(null);
+          setCameraId(null);
+          return check(null);
+        }
+        if (my !== run.current) return;
+        setState({ s: 'error', message: name === 'NotAllowedError' ? t('camcheck.denied') : name === 'NotReadableError' ? t('camcheck.busy') : t('camcheck.failed') });
+        return;
       }
-      if (my !== run.current) return;
-      setState({ s: 'error', message: name === 'NotAllowedError' ? t('camcheck.denied') : name === 'NotReadableError' ? t('camcheck.busy') : t('camcheck.failed') });
-      return;
+      if (my !== run.current) return stopStream(st);
+      setStream(st);
+      if (i === 0) void listCameras().then(setCameras, () => undefined);
+      setState({ s: 'sampling', p: 0, label: profile.label });
+      const sample = await sampleCamera(st, i === 0 ? 3000 : 2500, (x) => my === run.current && setState({ s: 'sampling', p: x, label: profile.label }));
+      if (my !== run.current) return stopStream(st);
+      if (!sample) {
+        // No MediaStreamTrackProcessor: nothing to measure with, so don't block.
+        handedOff.current = true;
+        p.onReady(st, false);
+        return;
+      }
+      tried.push({ profile, sample });
+      const v = assessCamera(sample);
+      // Stop at the first good mode; a black picture or a dead camera isn't a resolution problem.
+      if ((v.ok && v.level === 'good') || (!v.ok && v.level !== 'slow') || i === PROFILES.length - 1) break;
+      stopStream(st);
+      setStream(null);
+      st = null;
     }
-    if (my !== run.current) return stopStream(st);
-    setStream(st);
-    void listCameras().then(setCameras, () => undefined);
-    setState({ s: 'sampling', p: 0 });
-    const sample = await sampleCamera(st, 3000, (x) => my === run.current && setState({ s: 'sampling', p: x }));
-    if (my !== run.current) return;
-    if (!sample) {
-      // No MediaStreamTrackProcessor: nothing to measure with, so don't block.
-      handedOff.current = true;
-      p.onReady(st, false);
-      return;
+    const pick = pickProfile(tried);
+    if (!pick) return;
+    const chosen = tried[pick.index]!;
+    if (!st || open !== chosen.profile) {
+      // The best mode wasn't the last one tried: reopen it.
+      stopStream(st);
+      try {
+        st = await openCamera(id, chosen.profile);
+      } catch {
+        if (my === run.current) setState({ s: 'error', message: t('camcheck.failed') });
+        return;
+      }
+      if (my !== run.current) return stopStream(st);
+      setStream(st);
     }
-    const v = assessCamera(sample);
-    setState({ s: 'done', v });
-    if (v.ok && v.level === 'good') {
+    const first = tried[0]!;
+    const note = pick.index > 0 && first.sample.fps !== null
+      ? t('camcheck.fallback', { label: chosen.profile.label, first: first.profile.label, fps: Math.round(first.sample.fps) })
+      : attempts > 1 && !pick.verdict.ok ? t('camcheck.triedLower') : null;
+    setState({ s: 'done', v: pick.verdict, note });
+    if (pick.verdict.ok && pick.verdict.level === 'good') {
       handedOff.current = true;
       p.onReady(st, true);
     }
@@ -114,7 +150,7 @@ export function CameraCheck(p: { onReady: (stream: MediaStream, healthy: boolean
                 <div className="h-1.5 overflow-hidden rounded-full bg-hairline">
                   <div className="h-full bg-verified transition-[width]" style={{ width: `${Math.max(4, state.p * 100)}%` }} />
                 </div>
-                <p className="mt-2 text-sm text-muted">{t('camcheck.measuring')}</p>
+                <p className="mt-2 text-sm text-muted">{t('camcheck.measuring')} <span className="font-mono text-xs">{state.label}</span></p>
               </div>
             ) : null}
             {verdict ? (
@@ -122,6 +158,7 @@ export function CameraCheck(p: { onReady: (stream: MediaStream, healthy: boolean
                 {verdict.reason}
               </p>
             ) : null}
+            {state.s === 'done' && state.note ? <p className="mt-2 text-sm text-muted" data-testid="camcheck-note">{state.note}</p> : null}
             {state.s === 'error' ? <p className="rounded-xl border border-withheld/60 p-3 text-sm" data-testid="camcheck-error">{state.message}</p> : null}
           </div>
 

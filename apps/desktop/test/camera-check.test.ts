@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assessCamera, fpsFromTimestamps, GOOD_FPS, SDK_MIN_FPS } from '../src/renderer/camera-check';
+import { assessCamera, fpsFromTimestamps, GOOD_FPS, pickProfile, PROFILES, SDK_MIN_FPS } from '../src/renderer/camera-check';
 
 const sample = (fps: number | null, luma: number | null = 120, frames = 90) => ({ fps, luma, width: 1280, height: 720, frames });
 
@@ -39,5 +39,29 @@ describe('assessCamera', () => {
   it('flags a camera that sends no frames', () => {
     expect(assessCamera(sample(null, null, 0))).toMatchObject({ ok: false, level: 'none' });
     expect(assessCamera(sample(30, 100, 1))).toMatchObject({ ok: false, level: 'none' });
+  });
+});
+
+describe('pickProfile (resolution fallback)', () => {
+  const [hd, vga, wide] = PROFILES as [typeof PROFILES[0], typeof PROFILES[0], typeof PROFILES[0]];
+  it('keeps the SDK default when it is good', () => {
+    expect(pickProfile([{ profile: hd, sample: sample(30) }])).toMatchObject({ index: 0, verdict: { level: 'good' } });
+  });
+  it('takes the first lower resolution that reaches full rate', () => {
+    const r = pickProfile([{ profile: hd, sample: sample(16) }, { profile: vga, sample: sample(30) }]);
+    expect(r).toMatchObject({ index: 1, verdict: { ok: true, level: 'good' } });
+  });
+  it('prefers a good mode over a borderline one', () => {
+    const r = pickProfile([{ profile: hd, sample: sample(26) }, { profile: vga, sample: sample(30) }]);
+    expect(r?.index).toBe(1);
+  });
+  it('when nothing passes, reports the fastest mode, still held back', () => {
+    const r = pickProfile([{ profile: hd, sample: sample(16) }, { profile: vga, sample: sample(18) }, { profile: wide, sample: sample(17) }]);
+    expect(r).toMatchObject({ index: 1, verdict: { ok: false, level: 'slow' } });
+  });
+  it('the SDK default comes first, and lower modes demand the SDK floor', () => {
+    expect(PROFILES[0]).toMatchObject({ width: 1280, height: 720 });
+    expect(PROFILES.slice(1).every((p) => p.requireFps === SDK_MIN_FPS)).toBe(true);
+    expect(pickProfile([])).toBeNull();
   });
 });
