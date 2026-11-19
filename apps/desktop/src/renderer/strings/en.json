@@ -41,6 +41,8 @@
   "camcheck.denied": "Camera permission was refused. Allow camera access for Witness in your system privacy settings (Windows: Settings → Privacy & security → Camera), then check again.",
   "camcheck.busy": "The camera is in use by another app. Close it (Zoom, Teams, a browser tab, the Camera app) and check again.",
   "camcheck.failed": "The camera couldn't be turned on. Try another camera, or reconnect it and check again.",
+  "camcheck.fallback": "Using {label}: at {first} this camera gave only {fps} fps.",
+  "camcheck.triedLower": "Lower resolutions were tried too and didn't reach 25 fps, so this is the light or the camera itself.",
   "measure.banner": "Measuring",
   "measure.paused": "Paused",
   "measure.stop": "Stop",
