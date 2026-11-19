@@ -5,11 +5,12 @@ import type { Scenario } from '@witness/sdk-adapter';
 import type { Checkin, Settings } from '../shared/ipc-schema';
 import { bridge, hasSdk, type AppInfo, type KeyStatus } from './bridge';
 import { chime } from './sound';
-import { createSource, prepareSource, type SourceChoice } from './sources';
+import { createSource, prepareSource, type CheckedCamera, type SourceChoice } from './sources';
 import { t } from './strings';
 import { Home } from './screens/Home';
 import { KeySetup } from './screens/KeySetup';
 import { Consent } from './screens/Consent';
+import { CameraCheck } from './screens/CameraCheck';
 import { Measure } from './screens/Measure';
 import { HistorySheet } from './screens/History';
 import { DataSheet } from './screens/DataSheet';
@@ -29,6 +30,8 @@ export function App() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [record, setRecord] = useState<CheckinRecord | null>(null);
   const [saved, setSaved] = useState<'no' | 'yes' | 'failed'>('no');
+  const [camCheck, setCamCheck] = useState(false);
+  const checked = useRef<CheckedCamera | null>(null);
   const refs = useRef({ choice, settings, info });
   refs.current = { choice, settings, info };
 
@@ -49,7 +52,10 @@ export function App() {
       new SessionController({
         createSource: (mode) => {
           const { choice: c, settings: s, info: i } = refs.current;
-          const src = createSource(c, mode, { sdkVersion: i?.sdkVersion ?? 'unknown', telemetry: s?.telemetry ?? false, speed: replaySpeed });
+          // The checked stream belongs to exactly one session.
+          const camera = c.kind === 'camera' ? checked.current : null;
+          checked.current = null;
+          const src = createSource(c, mode, { sdkVersion: i?.sdkVersion ?? 'unknown', telemetry: s?.telemetry ?? false, speed: replaySpeed, camera });
           src.onStream((st) => setStream(st));
           return src;
         },
@@ -117,6 +123,21 @@ export function App() {
     await controller.accept();
   }, [controller]);
 
+  // Consent given: camera sessions get the free camera check first; replays start at once.
+  const onConsent = useCallback(() => {
+    if (refs.current.choice.kind === 'camera') setCamCheck(true);
+    else void accept();
+  }, [accept]);
+  const onCameraReady = useCallback((stream: MediaStream, healthy: boolean) => {
+    checked.current = { stream, healthy };
+    setCamCheck(false);
+    void accept();
+  }, [accept]);
+  const cancelCameraCheck = useCallback(() => {
+    setCamCheck(false);
+    controller.decline();
+  }, [controller]);
+
   // Keyboard: Space start/stop, Esc stop, H history, D data.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -126,13 +147,16 @@ export function App() {
       if (e.key === 'Escape') {
         if (sheet) setSheet(null);
         else if (p === 'measuring' || p === 'paused' || p === 'acquiring') controller.stop();
-        else if (p === 'consent') controller.decline();
+        else if (p === 'consent') {
+          if (camCheck) cancelCameraCheck();
+          else controller.decline();
+        }
         return;
       }
       if (e.key === ' ' && !(el && el.tagName === 'BUTTON')) {
         e.preventDefault();
         if (p === 'idle' || p === 'complete') startCheckIn();
-        else if (p === 'consent') void accept();
+        else if (p === 'consent' && !camCheck) onConsent();
         else if (p === 'measuring' || p === 'paused' || p === 'acquiring') controller.stop();
         return;
       }
@@ -141,7 +165,7 @@ export function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [controller, sheet, startCheckIn, accept]);
+  }, [controller, sheet, startCheckIn, onConsent, camCheck, cancelCameraCheck]);
 
   const updateSettings = async (p: Partial<Settings>) => setSettings(await bridge.settings.set(p));
 
@@ -170,6 +194,8 @@ export function App() {
         onCheckIn={startCheckIn}
       />
     );
+  } else if (view.phase === 'consent' && camCheck) {
+    body = <CameraCheck onReady={onCameraReady} onCancel={cancelCameraCheck} />;
   } else if (view.phase === 'consent') {
     body = (
       <Consent
@@ -177,7 +203,7 @@ export function App() {
         compact={settings.consentCompact}
         retentionDays={settings.retentionDays}
         onCompact={(v) => void updateSettings({ consentCompact: v })}
-        onAccept={() => void accept()}
+        onAccept={onConsent}
         onDecline={() => controller.decline()}
       />
     );

@@ -1,10 +1,14 @@
 import { faceBox, normaliseBox, OffsetEstimator, type Point } from '@witness/features';
 import {
-  RealSmartSpectra, requestedMetrics, type RendererSdkLike, syntheticTrace, TraceReplaySdk, type Scenario, type SourceEvent, type VitalsSource,
+  RealSmartSpectra, requestedMetrics, Status, type RendererSdkLike, syntheticTrace, TraceReplaySdk, type Scenario, type SourceEvent, type VitalsSource,
 } from '@witness/sdk-adapter';
 import { bridge } from './bridge';
+import { lockCamera } from './camera-check';
 
 export type SourceChoice = { kind: 'camera' } | { kind: 'replay'; scenario: Scenario };
+
+/** The stream the camera check opened, and whether it passed (so locking exposure is safe). */
+export interface CheckedCamera { stream: MediaStream; healthy: boolean }
 
 /** Per-frame worker cost samples (ms) for the performance budget check. */
 export const workerStats: number[] = [];
@@ -24,11 +28,13 @@ class CameraSource implements VitalsSource {
   private clone: MediaStreamTrack | null = null;
   private readonly frameClock = new OffsetEstimator(301);
   private lastBoxAt = 0;
+  private locked = false;
 
-  constructor(mode: 'quick' | 'full', sdkVersion: string, telemetry: boolean) {
+  constructor(mode: 'quick' | 'full', sdkVersion: string, telemetry: boolean, private readonly cam: CheckedCamera | null) {
     this.mode = mode;
     this.sdkVersion = sdkVersion;
     this.real = new RealSmartSpectra({
+      hostStream: cam?.stream,
       mode,
       sdkVersion,
       create: async () => {
@@ -48,6 +54,14 @@ class CameraSource implements VitalsSource {
       onLandmarks: (_t, pts) => this.onLandmarks(pts),
     });
     this.real.onStream((s) => this.attachWorker(s));
+    // The SDK locks exposure only on streams it opens itself. For ours, lock
+    // once it is running, and only if the check found a healthy frame rate.
+    this.real.on((e) => {
+      if (e.type === 'status' && e.status === Status.running && cam?.healthy && !this.locked) {
+        this.locked = true;
+        lockCamera(cam.stream);
+      }
+    });
   }
 
   private onLandmarks(pts: Point[]): void {
@@ -95,16 +109,29 @@ class CameraSource implements VitalsSource {
     this.clone = null;
   }
 
+  /** We opened this stream, so we turn the camera off; the SDK never stops host tracks. */
+  private releaseCamera(): void {
+    this.cam?.stream.getTracks().forEach((tr) => tr.stop());
+  }
+
   start(): Promise<void> {
     return this.real.start();
   }
   async stop(): Promise<void> {
     this.stopWorker();
-    await this.real.stop();
+    try {
+      await this.real.stop();
+    } finally {
+      this.releaseCamera();
+    }
   }
   destroy(): void {
     this.stopWorker();
-    this.real.destroy();
+    try {
+      this.real.destroy();
+    } finally {
+      this.releaseCamera();
+    }
   }
   nowUs(): number {
     return this.real.nowUs();
@@ -133,7 +160,7 @@ export async function prepareSource(choice: SourceChoice): Promise<void> {
   if (choice.kind === 'camera') await loadDecoder();
 }
 
-export function createSource(choice: SourceChoice, mode: 'quick' | 'full', o: { sdkVersion: string; telemetry: boolean; speed?: number }): VitalsSource {
+export function createSource(choice: SourceChoice, mode: 'quick' | 'full', o: { sdkVersion: string; telemetry: boolean; speed?: number; camera?: CheckedCamera | null }): VitalsSource {
   if (choice.kind === 'replay') return new TraceReplaySdk(syntheticTrace(choice.scenario, { mode }), { speed: o.speed ?? 1 });
-  return new CameraSource(mode, o.sdkVersion, o.telemetry);
+  return new CameraSource(mode, o.sdkVersion, o.telemetry, o.camera ?? null);
 }

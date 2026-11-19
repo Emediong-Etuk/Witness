@@ -9,6 +9,7 @@ export interface RendererSdkLike {
   stop(): Promise<void>;
   destroy(): void;
   on(event: string, cb: (...args: never[]) => void): unknown;
+  useMediaStream?(stream: MediaStream): unknown;
 }
 
 export interface RealOptions {
@@ -21,6 +22,12 @@ export interface RealOptions {
   clockUs?: () => number;
   /** Receives landmark sets on the session clock for ROI placement. Coordinates must not be stored. */
   onLandmarks?: (t: number, points: Point[]) => void;
+  /**
+   * A stream the host already opened (after its own camera check). The SDK
+   * then uses it instead of opening the camera, emits no 'streamAvailable',
+   * and leaves its tracks alone, so the host stops them.
+   */
+  hostStream?: MediaStream;
 }
 
 const defaultClockUs = () => (performance.timeOrigin + performance.now()) * 1000;
@@ -106,7 +113,13 @@ export class RealSmartSpectra implements VitalsSource {
     sdk.on('error', ((code: number, message: string, retryable: boolean) =>
       this.events.emit({ type: 'error', t: this.nowUs(), code, message: String(message ?? ''), retryable: !!retryable })) as never);
     sdk.on('streamAvailable', ((stream: MediaStream) => this.streams.emit(stream)) as never);
+    const host = this.o.hostStream;
+    if (host) {
+      if (!sdk.useMediaStream) throw new Error('this SDK build cannot take a host stream');
+      sdk.useMediaStream(host);
+    }
     await sdk.start();
+    if (host) this.streams.emit(host);
   }
 
   async stop(): Promise<void> {
