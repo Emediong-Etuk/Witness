@@ -42,6 +42,7 @@ protocol.registerSchemesAsPrivileged([
 if (!app.requestSingleInstanceLock()) app.quit();
 
 let win: BrowserWindow | null = null;
+const CLOSE_GRACE_MS = 1200;
 let sdkVersion = 'unavailable';
 
 const MIME: Record<string, string> = {
@@ -129,6 +130,20 @@ function createWindow(): BrowserWindow {
   // Minimize/hide stops measuring within 1 s: tell the renderer immediately.
   const stop = () => w.webContents.send('window:hidden');
   w.on('minimize', stop);
+  // Closing mid-measurement: the SDK's native runtime aborts the process if its
+  // window is torn down while it is still running. Tell the renderer to stop
+  // (as on minimize), give it a moment to reach idle, then close for real.
+  let closing = false;
+  w.on('close', (e) => {
+    if (closing || w.webContents.isDestroyed()) return;
+    closing = true;
+    e.preventDefault();
+    stop();
+    w.hide(); // feels instant; the real close follows
+    setTimeout(() => {
+      if (!w.isDestroyed()) w.close();
+    }, CLOSE_GRACE_MS);
+  });
   w.on('hide', stop);
   bindSdk(w);
   const dev = devOrigin();

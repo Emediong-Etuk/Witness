@@ -139,4 +139,25 @@ describe('RealSmartSpectra (with a stub SDK)', () => {
     await src.stop();
     src.destroy();
   });
+  it('a host stream goes to useMediaStream before start, then out through onStream', async () => {
+    const calls: string[] = [];
+    const host = { id: 'host-stream' } as unknown as MediaStream;
+    const stub = {
+      start: async () => void calls.push('start'), stop: async () => {}, destroy: () => {},
+      on: () => {},
+      useMediaStream: (s: MediaStream) => void calls.push(`use:${(s as unknown as { id: string }).id}`),
+    };
+    const src = new RealSmartSpectra({ create: () => stub, decode: () => ({}), mode: 'quick', sdkVersion: '3.5.0', hostStream: host });
+    const seen: MediaStream[] = [];
+    src.onStream((s) => seen.push(s));
+    await src.start();
+    expect(calls).toEqual(['use:host-stream', 'start']);
+    expect(seen).toEqual([host]);
+    src.destroy();
+  });
+  it('refuses a host stream when the SDK build has no useMediaStream', async () => {
+    const stub = { start: async () => {}, stop: async () => {}, destroy: () => {}, on: () => {} };
+    const src = new RealSmartSpectra({ create: () => stub, decode: () => ({}), mode: 'quick', sdkVersion: '3.5.0', hostStream: {} as MediaStream });
+    await expect(src.start()).rejects.toThrow(/host stream/);
+  });
 });
