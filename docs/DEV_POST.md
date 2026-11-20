@@ -4,12 +4,7 @@ published: false
 tags: presagechallenge, devchallenge, electron, typescript
 ---
 
-*This is a submission for the [Presage SmartSpectra SDK Challenge](https://dev.to/challenges/presage).*
-
-<!-- Before publishing:
-  - add the cover image
-  - check the challenge link above points to the right challenge page
-  - read the "A note on testing" section once more -->
+*This is a submission for the [Presage SmartSpectra SDK Challenge](https://dev.to/challenges/presage-2026-11-04).*
 
 ## What I Built
 
@@ -21,7 +16,11 @@ SmartSpectra turns 12 seconds of video into a pulse, 30 seconds into a breathing
 
 {% youtube t9cM9Yxl6Xg %}
 
-- **Technical walkthrough (3:29):** [youtu.be/8R1XOzlivdc](https://youtu.be/8R1XOzlivdc)
+**Technical walkthrough (3:29):**
+
+{% youtube 8R1XOzlivdc %}
+
+- **Try it with your own camera:** [download the app](https://github.com/Emediong-Etuk/Witness/releases/latest) for Windows, macOS (Apple Silicon) or Linux, and use a free SmartSpectra key.
 - **Judge site (no install):** [witness-nine.vercel.app](https://witness-nine.vercel.app). It has a guided tour, a Replay Lab where you can watch the gate withhold contaminated readings, an in-browser verifier with a tamper playground, and a flicker tool for reproducing the light test.
 
 ## A note on testing
@@ -113,7 +112,7 @@ Requested metrics are minimal: cardio and face signals for Quick; plus breathing
 **Best Thoughtful Real-World Use**
 - **A real need:** people take camera vitals at home in the evening, with a TV on, while talking, while eating. Those are exactly the conditions the model cards warn about. Witness tells them when a number can't be trusted, and why.
 - **Usability:** a couple of clicks from launch to a result. Every withheld value comes with a plain reason and a countdown, and a free camera check heads off sessions that can't work.
-- **Consent and data:** the camera is off until you agree, every session. Video never leaves the computer, and only verified numbers you choose to save are kept, encrypted. Every claim has a receipt anyone can recompute.
+- **Consent and data:** the camera is off until you agree, every session. Video is processed on your computer and never saved by Witness, and only verified numbers you choose to save are kept, encrypted. Every number it shows has a receipt anyone can recompute.
 
 ## Consent and Data Handling
 
