@@ -307,3 +307,11 @@ So recorder output feeds straight into the bench.
   - `pickProfile` (pure, unit-tested) takes the first good mode, else a borderline one, else reports the fastest mode, still held back.
   - The note says which resolution is in use and what 1280×720 gave. When no mode reaches 25 fps it says so ("this is the light or the camera itself").
   - Checked with the 15 fps fake camera: the lower modes are refused at the 25 fps minimum and the note shows. Checked with the 30 fps one: it starts at once at 1280×720. The fake device can't model a mode-dependent frame rate, so the fallback path is covered by unit tests, not by a real camera.
+
+### Note to judges: no live reading on the author's machine
+- Greg's webcam gives about 16 fps at a low resolution. The resolution fallback didn't get it to 25 fps, and he has no other camera to use. He asked for this to be reported plainly, with a request that judges test on their own devices.
+- What is true and now stated (README, judge-site home page + tour step, Run page):
+  - SDK 3.5.0 started on his machine with his key, then stopped with error 14 before the first 12-s pulse window filled. There is **no real-camera reading** in the submission, and the held-out numbers stay TBD.
+  - The note also lists what was verified without a live camera: synthetic replays in real Electron and in the browser build; the camera check and SDK hand-off with Chromium's simulated camera; the gate, receipts and verifier in CI.
+- Also corrected on the Run page: option B pointed to GitHub Releases, but packaging was never done, so there are no installers. `SITE.releasesUrl` is now `null`, and the card says installers aren't published and points to option C. The README's run section now has the full from-source steps, the 25 fps requirement and the Windows notes.
+- The "Start with the videos" tour step no longer promises "live SmartSpectra signals" in the demo.

@@ -2,7 +2,8 @@
 export const SITE = {
   siteUrl: 'https://witness-nine.vercel.app',
   repoUrl: 'https://github.com/Emediong-Etuk/Witness',
-  releasesUrl: 'https://github.com/Emediong-Etuk/Witness/releases',
+  /** Set once installers are published on GitHub Releases. */
+  releasesUrl: null as string | null,
   devPostUrl: null as string | null,
   videos: {
     pitch: { title: 'The 3-minute demo', youtubeId: null as string | null, length: '≤ 3:00' },
