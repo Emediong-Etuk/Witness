@@ -16,7 +16,10 @@ SmartSpectra turns 12 seconds of video into a pulse, 30 seconds into a breathing
 
 {% youtube t9cM9Yxl6Xg %}
 
-- **Technical walkthrough (3:29):** [youtu.be/8R1XOzlivdc](https://youtu.be/8R1XOzlivdc)
+**Technical walkthrough (3:29):**
+
+{% youtube 8R1XOzlivdc %}
+
 - **Try it with your own camera:** [download the app](https://github.com/Emediong-Etuk/Witness/releases/latest) for Windows, macOS (Apple Silicon) or Linux, and use a free SmartSpectra key.
 - **Judge site (no install):** [witness-nine.vercel.app](https://witness-nine.vercel.app). It has a guided tour, a Replay Lab where you can watch the gate withhold contaminated readings, an in-browser verifier with a tamper playground, and a flicker tool for reproducing the light test.
 
