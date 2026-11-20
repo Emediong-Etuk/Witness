@@ -356,3 +356,21 @@ So recorder output feeds straight into the bench.
   - **R9 (steady light) fires on the clean clip too.** Its placeholder threshold is too strict for phone video (auto-exposure). This is a calibration problem, and two clips aren't enough to calibrate (`minCleanReadings` is 30).
   - **Site and docs updated:** the Replay Lab opens on the real traces, labelled "real SDK output". The README, `TestingNote`, the tour, the DEV post and `CONSENT_AND_DATA` now say real SDK output exists from phone clips, while a live webcam check-in and held-out results don't.
 - **Videos published** on YouTube: demo https://youtu.be/t9cM9Yxl6Xg (2:48), walkthrough https://youtu.be/8R1XOzlivdc (3:29). The IDs are in `site.config.ts` (the site embeds them from youtube-nocookie.com, and only after the user presses play; e2e checks both), in the DEV post (`{% youtube %}` embed + link) and in the README links row. The last placeholders are gone.
+
+### Installers (2026-11-20)
+- Goal: judges test with their own camera without installing Node.
+- **`tools/package/stage.mjs`** builds a self-contained app folder outside the npm workspace:
+  - the built app (`apps/desktop/out`);
+  - the runtime dependency closure (`@smartspectra/node-sdk`, `zod` and their dependencies), pinned to the exact root-lockfile versions through `overrides`;
+  - the electron-builder config.
+- **What electron-builder 26.18.1 packages:**
+  - the asar archive gets only the SDK's JS; `koffi` is unpacked (native `.node`);
+  - **only this platform's** SmartSpectra runtime is copied to `resources/smartspectra/`. The packaged main process already points `SMARTSPECTRA_CAPI_PATH` there.
+  - Other platforms' runtimes (65–100 MB each) are excluded.
+- **Checked here** (Linux AppImage, 181 MB): the packaged `linux-unpacked/witness` was launched under xvfb with Chromium's fake 30 fps camera.
+  - It loads `app://witness` with `isPackaged: true` and `SMARTSPECTRA_CAPI_PATH` pointing at the bundled `libsmartspectra_capi.so`.
+  - Key screen → consent → camera check passes → **the SDK starts from the bundled runtime**. It then ends with "Can't reach Presage" (code 5), because the container blocks Presage.
+- **`.github/workflows/release.yml`:** a matrix job, Windows x64 (NSIS), macOS arm64 (dmg, ad-hoc signed) and Linux x64 (AppImage).
+  - Each build asserts that the bundled runtime exists.
+  - On a `v*` tag it publishes a GitHub Release with SHA256SUMS and install notes for unsigned builds. On PRs touching packaging it only builds artifacts.
+  - All builds are unsigned (no certificates); the notes explain SmartScreen and Gatekeeper.
