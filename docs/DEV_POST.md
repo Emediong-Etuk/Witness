@@ -31,9 +31,15 @@ I couldn't complete a live check-in on my own computer. Its webcam gives about 1
 
 Witness now runs a free **camera check** before the SDK starts, which also tries lower resolutions, so a camera like mine is caught before any Presage minutes are spent. Mine couldn't reach 25 fps at any of them.
 
-So this submission has **no reading from a real camera yet**, and the held-out results on the site and in the README say TBD rather than show numbers I don't have. **Please try it on your own laptop or USB webcam.** Many give 25 fps or more in good light, and the camera check will tell you for free.
+So I recorded two consented 60-second clips of myself on my phone (30 fps) and fed them through the **real SmartSpectra SDK 3.5.0** with Witness's bench tool. Those traces and their receipts are in the repo, and the Replay Lab opens on them.
+- **The still clip:** Witness verified one SDK pulse reading, 78 bpm (`corpus/receipts/B1.jsonl`).
+- **The clip where I read aloud from 0:25 to 0:45:** Witness withheld every reading the SDK marked `stable` (`corpus/receipts/T1.jsonl`). Breathing was withheld with "You spoke" while speech was inside its window. After the talking, the SDK's pulse dropped by about 20 bpm while some readings stayed `stable`, and Witness withheld those because the window held motion and non-OK validation codes.
 
-What I could verify without a live camera:
+Two clips with no oximeter reference are not an accuracy result. The thresholds are still uncalibrated starting values, and on the still clip, where nothing was disturbing the reading, the steady-light rule still withheld readings. That's a sign its starting threshold is too strict for phone video. So the held-out results still say TBD.
+
+A live check-in from a webcam is still untested by me. **Please try it on your own laptop or USB webcam.** Many give 25 fps or more in good light, and the camera check will tell you for free.
+
+What else I could verify without a live webcam:
 - the full app on labelled synthetic replays, in Electron and in the browser;
 - the camera check and the hand-off to the real SDK, in Electron with Chromium's simulated camera: a 15 fps feed is held back, and a 30 fps feed starts the real SDK on that stream;
 - the gate, the receipts, the hash chain and the verifier, through the unit, property and UI tests in CI.

@@ -346,5 +346,12 @@ So recorder output feeds straight into the bench.
   - **0 receipts.** The gate produced no readings. Likely cause, reproduced here: phone videos are stored sideways with a rotation flag. `ffprobe` reported the stored 1920×1080 while `ffmpeg` decoded upright 1080×1920 frames: the same byte count, so nothing failed, but every frame was read with the wrong width. That means scrambled pixels, no face, and no readings.
     - **Fix:** `probe` now applies the rotation (side-data `rotation` or the `rotate` tag) and reports the decoded size, and `feedSize` caps the long side at 1280.
     - **Test:** a clip flagged with a 90° rotation must reach the SDK stub as 360×640.
-    - **New `bench:summary`:** an offline diagnostic that counts readings and validation codes in a trace, to confirm this on Greg's traces before spending credits on a re-run.
+    - **New `bench:summary`:** an offline inspection tool that counts readings and validation codes in a trace, to confirm this on Greg's traces before spending credits on a re-run.
   - **`docs.EGRESS.md` ✗ on Windows:** the CRLF checkout didn't match the LF-generated table. The verifier now normalises line endings. `.gitattributes` forces LF and marks traces and receipts `-text`, so their bytes (and hashes) never change on checkout.
+- **Third real run: the first real readings.** Re-recorded B1/T1 after the rotation fix. Each clip is 720×1280 upright, with 0 SDK errors and about 96% `ok` validation frames. `npm run verify`: 2 traces, all 45 receipts recomputed and matched. From `corpus/receipts/`, with no ground truth and uncalibrated thresholds:
+  - **B1 (still and quiet):** 16 readings, 2 pulse and 14 breathing. **One pulse VERIFIED (77.7 bpm at 53.5 s).** The other SDK-stable pulse, at 50.4 s, was withheld by R9 alone.
+  - **T1 (talking 25–45 s):** 29 readings, 10 marked `stable` by the SDK, and Witness withheld all 10.
+    - Breathing was withheld with R7 ("You spoke") from 23 s onwards.
+    - After the talking, the SDK's pulse fell from 72–80 to 49–58 bpm. The readings at 56.9 s (53.9 bpm) and 59.2 s (57.7 bpm) were still `stable`, and Witness withheld them for R4 (non-OK validation codes) and R6 (motion).
+  - **R9 (steady light) fires on the clean clip too.** Its placeholder threshold is too strict for phone video (auto-exposure). This is a calibration problem, and two clips aren't enough to calibrate (`minCleanReadings` is 30).
+  - **Site and docs updated:** the Replay Lab opens on the real traces, labelled "real SDK output". The README, `TestingNote`, the tour, the DEV post and `CONSENT_AND_DATA` now say real SDK output exists from phone clips, while a live webcam check-in and held-out results don't.
