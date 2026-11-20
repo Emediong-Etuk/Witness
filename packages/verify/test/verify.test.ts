@@ -127,6 +127,11 @@ describe('verifyAll', { timeout: 60_000 }, () => {
     const { T2: _t, ...rr } = good.receipts;
     expect(fails({ ...good, receipts: rr }).map((c) => c.id)).toContain('receipts.T2');
   });
+  it('a CRLF checkout of EGRESS.md (Windows) still matches', () => {
+    const doc = good.egress!.doc!.replace(/\n/g, '\r\n');
+    const r = verifyAll({ ...good, egress: { ...good.egress!, doc } });
+    expect(r.checks.find((c) => c.id === 'docs.EGRESS.md')?.status).toBe('pass');
+  });
   it('a hand-edited egress table fails', () => {
     const doc = good.egress!.doc!.replace('_No audit runs yet._', '_Nothing leaves your device._');
     expect(fails({ ...good, egress: { runs: {}, doc } }).map((c) => c.id)).toContain('docs.EGRESS.md');

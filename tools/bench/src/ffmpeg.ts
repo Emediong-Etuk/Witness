@@ -1,8 +1,14 @@
 import { execFileSync, spawn } from 'node:child_process';
 
 export interface Probe {
+  /** Frame size as ffmpeg decodes it, i.e. after applying the rotation flag (phones store portrait video sideways). */
   width: number;
   height: number;
+  /** Size as stored in the file, before rotation. */
+  storedWidth: number;
+  storedHeight: number;
+  /** Display rotation in degrees (0, 90, 180, 270). */
+  rotation: number;
   /** Per-frame presentation times in seconds, in decode order. */
   ptsS: number[];
 }
@@ -10,25 +16,37 @@ export interface Probe {
 export function probe(file: string): Probe {
   const json = execFileSync(
     'ffprobe',
-    ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-show_entries', 'frame=best_effort_timestamp_time', '-of', 'json', file],
+    ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height:stream_side_data=rotation:stream_tags=rotate', '-show_entries', 'frame=best_effort_timestamp_time', '-of', 'json', file],
     { maxBuffer: 256 * 1024 * 1024 },
   ).toString('utf8');
-  const d = JSON.parse(json) as { streams: { width: number; height: number }[]; frames: { best_effort_timestamp_time?: string }[] };
+  const d = JSON.parse(json) as {
+    streams: { width: number; height: number; side_data_list?: { rotation?: number }[]; tags?: { rotate?: string } }[];
+    frames: { best_effort_timestamp_time?: string }[];
+  };
   const s = d.streams[0];
   if (!s) throw new Error(`${file}: no video stream`);
   const ptsS = d.frames.map((f) => Number(f.best_effort_timestamp_time));
   if (ptsS.some((x) => !Number.isFinite(x))) throw new Error(`${file}: frame without a timestamp`);
-  return { width: s.width, height: s.height, ptsS };
+  const rotation = normaliseRotation(s.side_data_list?.find((x) => typeof x.rotation === 'number')?.rotation ?? Number(s.tags?.rotate ?? 0));
+  const swap = rotation === 90 || rotation === 270;
+  return { width: swap ? s.height : s.width, height: swap ? s.width : s.height, storedWidth: s.width, storedHeight: s.height, rotation, ptsS };
 }
 
-/** The SDK's pipeline is tuned for 1280×720; larger clips are scaled down to this width. */
-export const MAX_FEED_WIDTH = 1280;
+export function normaliseRotation(deg: number): number {
+  if (!Number.isFinite(deg)) return 0;
+  return ((Math.round(deg / 90) * 90) % 360 + 360) % 360;
+}
 
-/** Output size for feeding: at most MAX_FEED_WIDTH wide, aspect kept, even dimensions. */
+/** The SDK's pipeline is tuned for 1280×720; larger clips are scaled so their long side is at most this. */
+export const MAX_FEED_SIDE = 1280;
+
+/** Output size for feeding: long side at most MAX_FEED_SIDE, aspect kept, even dimensions. */
 export function feedSize(width: number, height: number): { width: number; height: number } {
-  if (width <= MAX_FEED_WIDTH) return { width, height };
-  const h = Math.round((height * MAX_FEED_WIDTH) / width / 2) * 2;
-  return { width: MAX_FEED_WIDTH, height: h };
+  const long = Math.max(width, height);
+  if (long <= MAX_FEED_SIDE) return { width, height };
+  const k = MAX_FEED_SIDE / long;
+  const even = (x: number) => Math.max(2, Math.round((x * k) / 2) * 2);
+  return { width: even(width), height: even(height) };
 }
 
 /**

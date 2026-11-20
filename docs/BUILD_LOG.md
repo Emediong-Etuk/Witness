@@ -342,3 +342,9 @@ So recorder output feeds straight into the bench.
     - clips wider than 1280 px are scaled to 1280-wide before feeding (the SDK's pipeline is tuned for 720p);
     - `WITNESS_SDK_VERBOSE=1` raises the SDK log level to info.
   - Two new stub tests, plus the real-SDK reproduction above. On Greg's side, the open question is why the SDK couldn't reach Presage from `node` on his PC (network, VPN, or antivirus HTTPS scanning).
+- **Second real run (Greg's PC): the SDK processed both clips**, the first real SmartSpectra traces in the project. B1 has 3,664 trace lines and T1 has 3,628, both chained, pinned and schema-clean. Two problems showed up:
+  - **0 receipts.** The gate produced no readings. Likely cause, reproduced here: phone videos are stored sideways with a rotation flag. `ffprobe` reported the stored 1920×1080 while `ffmpeg` decoded upright 1080×1920 frames: the same byte count, so nothing failed, but every frame was read with the wrong width. That means scrambled pixels, no face, and no readings.
+    - **Fix:** `probe` now applies the rotation (side-data `rotation` or the `rotate` tag) and reports the decoded size, and `feedSize` caps the long side at 1280.
+    - **Test:** a clip flagged with a 90° rotation must reach the SDK stub as 360×640.
+    - **New `bench:summary`:** an offline diagnostic that counts readings and validation codes in a trace, to confirm this on Greg's traces before spending credits on a re-run.
+  - **`docs.EGRESS.md` ✗ on Windows:** the CRLF checkout didn't match the LF-generated table. The verifier now normalises line endings. `.gitattributes` forces LF and marks traces and receipts `-text`, so their bytes (and hashes) never change on checkout.

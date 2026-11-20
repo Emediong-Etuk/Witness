@@ -15,6 +15,7 @@ import { recordClip } from './record.js';
 import { buildReport, encodeReceipts, fillMarkers, renderTables, replayTrace } from '@witness/bench-core';
 import { configHash } from '@witness/gate';
 import { apiKeyFromEnv, realSdk } from './sdk-node.js';
+import { Code } from '@witness/sdk-adapter';
 import { readTrace, sha256File } from './trace-io.js';
 
 const P = defaultPaths();
@@ -103,6 +104,31 @@ async function main() {
       console.log(`  ${clip.id}: ${clip.condition}, ${clip.split}, ${durationS.toFixed(1)} s at ${fps.toFixed(1)} fps, ${clip.resolution}, sha256 ${clip.sha256.clip!.slice(0, 19)}…`);
       console.log(`  Added to corpus/manifest.json. The video itself stays in corpus/clips/ (gitignored); publishVideo=${clip.consent.publishVideo}.`);
       console.log(`  Next: npm run bench:estimate -- --clip ${clip.id}`);
+      return;
+    }
+    case 'summary': {
+      // Offline: what is inside a recorded trace (no SDK, no credits).
+      const ids = (opt('clip') ?? m.clips.map((c) => c.id).join(',')).split(',').filter(Boolean);
+      const codeName: Record<number, string> = Object.fromEntries(Object.entries(Code).map(([k, v]) => [v, k]));
+      for (const id of ids) {
+        const f = join(P.traces, `${id}.jsonl`);
+        if (!existsSync(f)) { console.log(`  ${id}: no trace`); continue; }
+        const t = readTrace(f);
+        const head = t.lines[0] as { meta?: Record<string, unknown> };
+        const count = (k: string) => t.lines.filter((l) => l.type === k).length;
+        const codes = new Map<string, number>();
+        const rates = new Map<string, number>();
+        let stable = 0;
+        for (const l of t.lines as { type: string; code?: number; metric?: string; stable?: boolean }[]) {
+          if (l.type === 'validation') codes.set(codeName[l.code!] ?? String(l.code), (codes.get(codeName[l.code!] ?? String(l.code)) ?? 0) + 1);
+          if (l.type === 'rate') { rates.set(l.metric!, (rates.get(l.metric!) ?? 0) + 1); if (l.stable) stable++; }
+        }
+        const meta = head.meta ?? {};
+        console.log(`  ${id}: ${meta.width}x${meta.height}${meta.rotation ? ` (rotation ${meta.rotation}°)` : ''}, frames sent ${meta.framesSent}, SDK errors ${meta.errors}`);
+        console.log(`    events: validation ${count('validation')}, rate ${count('rate')} (stable ${stable}), face ${count('face')}, face_feature ${count('face_feature')}, frame ${count('frame')}, status ${count('status')}, error ${count('error')}`);
+        console.log(`    readings by metric: ${[...rates].map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`);
+        console.log(`    validation codes: ${[...codes].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`);
+      }
       return;
     }
     case 'estimate':
@@ -199,7 +225,7 @@ async function main() {
       return;
     }
     default:
-      console.log('usage: bench <add-clip|estimate|record|replay [--write]|calibrate [--write]|report|docs> [options]');
+      console.log('usage: bench <add-clip|summary|estimate|record|replay [--write]|calibrate [--write]|report|docs> [options]');
       process.exitCode = 1;
   }
 }

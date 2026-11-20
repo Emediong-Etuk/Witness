@@ -10,6 +10,7 @@ import { calibrate, type ClipTrace } from '../src/calibrate.js';
 import { freezeStatus } from '../src/git.js';
 import { consentedClip, isContaminated } from '../src/manifest.js';
 import { recordClip } from '../src/record.js';
+import { feedSize, normaliseRotation } from '../src/ffmpeg.js';
 import { buildReport, groundTruth, renderTables, replayTrace } from '@witness/bench-core';
 import type { NodeSdkLike, SdkFactory } from '../src/sdk-node.js';
 import { ChainError, readTrace, writeTrace } from '../src/trace-io.js';
@@ -141,6 +142,23 @@ describe('record: SDK failures and large clips', () => {
     expect(sends).toBe(10);
     expect(logs.some((l) => l.includes('SDK error 5 (networkError)'))).toBe(true);
     expect(() => readFileSync(join(d, 'Z2.jsonl'))).toThrow();
+  });
+  it('decodes phone clips stored sideways (rotation flag) upright, with matching frame sizes', async () => {
+    const d = tmp();
+    mk(d, 'src.mp4', '640x360', 1);
+    execFileSync('ffmpeg', ['-v', 'error', '-display_rotation', '90', '-i', join(d, 'src.mp4'), '-c', 'copy', join(d, 'Z4.mp4')]);
+    const sizes = new Set<string>();
+    const logs: string[] = [];
+    const r = await recordClip({ clip: clip('Z4', 'baseline', 'calibration', { file: 'Z4.mp4' }), clipsDir: d, tracesDir: d, apiKey: 'x', createSdk: baseStub((_h, _n, w, hgt) => (sizes.add(`${w}x${hgt}`), true)), speed: 0, settleMs: 5, stub: true, log: (x) => logs.push(x) });
+    expect([...sizes]).toEqual(['360x640']);
+    expect(r.meta).toMatchObject({ width: 360, height: 640, rotation: 90, framesSent: 30 });
+    expect(logs.some((l) => l.includes('rotation 90°'))).toBe(true);
+  });
+  it('caps the long side at 1280 for portrait and landscape alike', () => {
+    expect(feedSize(1080, 1920)).toEqual({ width: 720, height: 1280 });
+    expect(feedSize(1920, 1080)).toEqual({ width: 1280, height: 720 });
+    expect(feedSize(640, 480)).toEqual({ width: 640, height: 480 });
+    expect([normaliseRotation(-90), normaliseRotation(90), normaliseRotation(180), normaliseRotation(Number.NaN)]).toEqual([270, 90, 180, 0]);
   });
   it('scales clips wider than 1280 to 1280-wide frames before sending', async () => {
     const d = tmp();

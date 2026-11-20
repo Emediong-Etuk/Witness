@@ -55,6 +55,7 @@ export async function recordClip(o: RecordOptions): Promise<RecordResult> {
   const pr = probe(file);
   const { width: W, height: H } = feedSize(pr.width, pr.height);
   const scaled = W !== pr.width || H !== pr.height;
+  if (pr.rotation) log(`${o.clip.id}: stored ${pr.storedWidth}x${pr.storedHeight}, rotation ${pr.rotation}°, decoded upright as ${pr.width}x${pr.height}`);
   if (scaled) log(`${o.clip.id}: ${pr.width}x${pr.height} scaled to ${W}x${H} for the SDK`);
   const mode = o.mode ?? 'full';
   const h = o.createSdk({ apiKey: o.apiKey, requestedMetrics: requestedMetrics(mode), telemetry: false });
@@ -196,6 +197,7 @@ export async function recordClip(o: RecordOptions): Promise<RecordResult> {
     clipSha256: clipSha,
     width: W,
     height: H,
+    rotation: pr.rotation,
     frames: pr.ptsS.length,
     framesSent: k,
     sendRejected: rejected,
