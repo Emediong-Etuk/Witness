@@ -32,7 +32,7 @@ General wellness information, not medical advice.
 | Camera check | **Real code.** Tested with Chromium's simulated 15 fps and 30 fps cameras. On a 30 fps feed, the real SDK starts on the checked stream. |
 | Held-out results (the numbers below) | **Not yet.** It needs a larger corpus with oximeter readings, then calibrated and frozen thresholds; the results say TBD until then. |
 | Egress audit (what the SDK sends on the wire) | **Tool built, not yet run** (`docs/EGRESS.md`) |
-| Installers | **Published, unsigned:** Windows x64, macOS Apple Silicon, Linux x64 ([latest release](https://github.com/Emediong-Etuk/Witness/releases/latest), with SHA256SUMS), built by `.github/workflows/release.yml` from the tagged commit |
+| Installers | **Published, unsigned:** Windows x64, macOS Apple Silicon, Linux x64 ([latest release](https://github.com/Emediong-Etuk/Witness/releases/latest), with SHA256SUMS), built by `.github/workflows/release.yml` from the tagged commit. The Windows build was checked on the author's PC: it installs, takes the key and runs the camera check ([screenshot](docs/evidence/2026-11-20-windows-installer-camera-check.png)). |
 
 
 ## The problem

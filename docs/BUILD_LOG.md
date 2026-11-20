@@ -388,4 +388,4 @@ So recorder output feeds straight into the bench.
   - it took the key and showed the consent card;
   - it turned on the camera with a live preview, and the camera check tried all three resolutions;
   - it stopped before the SDK with "This camera is giving 14 fps; SmartSpectra needs 25 or more", plus the lower-resolutions note. No Presage minutes were used.
-  - The screenshot shows the author's face, so it's kept out of the repo.
+  - Screenshot: `docs/evidence/2026-11-20-windows-installer-camera-check.png`, with the author's eyes covered at his request.
