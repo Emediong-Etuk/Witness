@@ -47,7 +47,9 @@ What else I could verify without a live webcam:
 
 **Repo:** [github.com/Emediong-Etuk/Witness](https://github.com/Emediong-Etuk/Witness) (MIT)
 
-Run it from source. You need Node 24, a [free SmartSpectra key](https://physiology.presagetech.com/auth/register) and a camera that gives 25 fps or more:
+**Download:** [installers for Windows x64, macOS (Apple Silicon) and Linux x64](https://github.com/Emediong-Etuk/Witness/releases/latest), unsigned, with SHA-256 sums. Install it, paste your own [free SmartSpectra key](https://physiology.presagetech.com/auth/register), and press **Check in**. You need a camera that gives 25 fps or more; the app checks this for free before the SDK starts.
+
+Or run it from source with Node 24:
 
 ```bash
 git clone https://github.com/Emediong-Etuk/Witness

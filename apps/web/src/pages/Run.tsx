@@ -25,9 +25,9 @@ export function Run() {
           <h3 className="mt-1 text-xl font-medium">{SITE.releasesUrl ? 'Download for your computer' : 'Installers: not published yet'}</h3>
           {SITE.releasesUrl ? (
             <>
-              <p className="mt-2 text-sm text-muted">macOS (Apple Silicon), Windows x64 or Linux x64. Open it, paste a free SmartSpectra key, and press <b>Check in</b>. Intel Macs aren't supported by the SDK.</p>
-              <a href={SITE.releasesUrl} className="btn btn-primary mt-4 py-1.5 text-sm">Releases and SHA-256 sums</a>
-              <p className="mt-3 text-xs text-muted">Builds are unsigned. macOS: right-click the app → Open. Windows: SmartScreen → More info → Run anyway. Free key: physiology.presagetech.com/auth/register</p>
+              <p className="mt-2 text-sm text-muted">Windows x64, macOS (Apple Silicon) or Linux x64. Install it, paste a free SmartSpectra key, and press <b>Check in</b>. You need a camera that gives 25 fps or more; the app checks this for free before the SDK starts. Intel Macs aren't supported by the SDK.</p>
+              <a href={SITE.releasesUrl} className="btn btn-primary mt-4 py-1.5 text-sm" data-testid="download">Download (with SHA-256 sums)</a>
+              <p className="mt-3 text-xs text-muted">Builds are unsigned. Windows: SmartScreen → More info → Run anyway. macOS: on first launch, System Settings → Privacy &amp; Security → Open Anyway. Linux: chmod +x the AppImage. Free key: physiology.presagetech.com/auth/register</p>
             </>
           ) : (
             <p className="mt-2 text-sm text-muted" data-testid="no-installers">Use option C to run the app from source; it takes a few minutes with Node 24. Free key: physiology.presagetech.com/auth/register</p>

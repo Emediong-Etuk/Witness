@@ -12,7 +12,7 @@ General wellness information, not medical advice.
 2. **Do:** open the **Replay Lab** and pick `talking`. **See:** breathing withheld while speech is inside its 30-s window, with the reason, and the SDK-only timeline beside it. Then pick `flicker72`. **See:** pulse withheld because the light pulses at a pulse-like rate.
 3. **Do:** open **Verify** and press **Run the verifier**. **See:** the same code as `npm run verify` re-running the gate in your browser.
 4. **Do:** in the **Tamper playground**, pick "Quietly loosen the motion threshold", then **Apply and verify**. **See:** ✗ FAILED, naming the checks that caught it.
-5. **Optional, with your own free SmartSpectra key and a camera that gives 25 fps or more:** [run the app from source](#run-it-on-your-device). A free camera check runs first.
+5. **Optional, with your own camera:** [download the app](https://github.com/Emediong-Etuk/Witness/releases/latest) for Windows, macOS (Apple Silicon) or Linux, paste your own free SmartSpectra key, and press **Check in**. **See:** a free camera check, then your own readings, each with a receipt. You need a camera that gives 25 fps or more; the check tells you.
 
 > **A note on live-camera testing.** I couldn't complete a live check-in on my own computer. Its webcam gives about 16 fps at a low resolution, and the SmartSpectra SDK stops any session that stays below 25 fps. SDK 3.5.0 did start with my key, then stopped with error 14 (`kSustainedLowFrameRate`) before the first 12-second pulse window filled ([screenshot](docs/evidence/2026-11-19-first-check-in-error-14.png)). Witness's camera check now catches this before the SDK starts, and it also tries lower resolutions; this webcam couldn't reach 25 fps at any of them. So I recorded two consented 60-second clips of myself on my phone (30 fps) and fed them through the **real SmartSpectra SDK 3.5.0** with `npm run bench:record`. Those traces and their receipts are published (`corpus/traces/`, `corpus/receipts/`). `npm run verify` recomputes every receipt from them, and the Replay Lab opens on them.
 >
@@ -32,7 +32,7 @@ General wellness information, not medical advice.
 | Camera check | **Real code.** Tested with Chromium's simulated 15 fps and 30 fps cameras. On a 30 fps feed, the real SDK starts on the checked stream. |
 | Held-out results (the numbers below) | **Not yet.** It needs a larger corpus with oximeter readings, then calibrated and frozen thresholds; the results say TBD until then. |
 | Egress audit (what the SDK sends on the wire) | **Tool built, not yet run** (`docs/EGRESS.md`) |
-| Installers | **Not published.** Run from source. |
+| Installers | **Published, unsigned:** Windows x64, macOS Apple Silicon, Linux x64 ([latest release](https://github.com/Emediong-Etuk/Witness/releases/latest), with SHA256SUMS), built by `.github/workflows/release.yml` from the tagged commit |
 
 
 ## The problem
@@ -70,7 +70,14 @@ npm run verify           # recompute every receipt, chain head, result and embed
 
 ### Run it on your device
 
-Desktop app from source. Installers aren't published yet. You need Node 24, a free SmartSpectra key ([register](https://physiology.presagetech.com/auth/register)) and a camera that gives 25 fps or more.
+**Easiest:** [download the installer](https://github.com/Emediong-Etuk/Witness/releases/latest) for Windows x64, macOS (Apple Silicon) or Linux x64. These are unsigned builds:
+- **Windows:** SmartScreen → More info → Run anyway.
+- **macOS:** on first launch, System Settings → Privacy & Security → Open Anyway.
+- **Linux:** `chmod +x` the AppImage.
+
+On first launch the app asks for your free SmartSpectra key ([register](https://physiology.presagetech.com/auth/register)) and stores it encrypted by your OS.
+
+**From source:** you need Node 24, the key and a camera that gives 25 fps or more.
 
 ```bash
 git clone https://github.com/Emediong-Etuk/Witness
