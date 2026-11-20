@@ -18,6 +18,7 @@ export function Run() {
             <Link to="/" hash="videos" className="btn py-1.5 text-sm">Videos</Link>
             <Link to="/replay" className="btn py-1.5 text-sm">Replay Lab</Link>
             <Link to="/verify" className="btn py-1.5 text-sm">Verify</Link>
+            {SITE.devPostUrl ? <a href={SITE.devPostUrl} className="btn py-1.5 text-sm">DEV post</a> : null}
           </div>
         </Reveal>
         <Reveal delay={0.05} className="card card-hover p-6">

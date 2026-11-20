@@ -381,3 +381,4 @@ So recorder output feeds straight into the bench.
   - `SHA256SUMS`.
   - The first tag had been pushed on the PR #9 merge, before the macOS runner fix. That run was cancelled and published nothing, so the tag was moved to the PR #10 merge.
   - The site's Run page, the README, the judges' note and the DEV post now point to the latest release.
+- **DEV post published:** https://dev.to/emediongrgb/witness-camera-vitals-that-show-their-work-1b73. It's linked from the site footer, the Run page and the README links row.

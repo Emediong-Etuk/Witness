@@ -109,6 +109,8 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
           <div className="grid content-start gap-1">
             <a href={SITE.repoUrl} className="hover:text-ink">Source code (MIT)</a>
+            {SITE.devPostUrl ? <a href={SITE.devPostUrl} className="hover:text-ink" data-testid="dev-post">The DEV post</a> : null}
+            {SITE.releasesUrl ? <a href={SITE.releasesUrl} className="hover:text-ink">Download the app</a> : null}
             <span>Built on the Presage SmartSpectra SDK</span>
             <span>This site loads nothing from third parties until you press play on a video.</span>
           </div>

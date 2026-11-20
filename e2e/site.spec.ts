@@ -108,6 +108,7 @@ test('Run page links the installers', async ({ page }) => {
   await page.goto('/run');
   await expect(page.getByTestId('download')).toHaveAttribute('href', 'https://github.com/Emediong-Etuk/Witness/releases/latest');
   await expect(page.getByTestId('no-installers')).toHaveCount(0);
+  await expect(page.getByTestId('dev-post')).toHaveAttribute('href', /^https:\/\/dev\.to\/emediongrgb\//);
 });
 
 test('Verify: published corpus passes in the browser', async ({ page }) => {
