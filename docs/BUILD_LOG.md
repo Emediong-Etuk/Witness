@@ -333,3 +333,12 @@ So recorder output feeds straight into the bench.
   - **Video lengths now match the files:** pitch 2:22, walkthrough 3:20 (the site config, the DEV post, the CTA and the tour).
   - **`TODO(verify)` on the landmark indices** replaced with a stated, unverified assumption.
 - **New: `npm run bench:add-clip`.** It registers a clip recorded elsewhere (e.g. a phone) in the manifest. It's offline: it probes the file, refuses anything below 25 fps, without `--i-consent`, duplicate IDs, or labels past the end of the clip, then hashes the file and writes a schema-valid entry. 5 tests, including real ffmpeg-made 30 fps and 15 fps clips. This is the route to a real SDK trace when no webcam reaches 25 fps.
+- **First real `bench:record` (Greg's PC, phone clips B1/T1, 1920×1080):** it failed with "SmartSpectra is not in a valid state for this operation", preceded by `Usage verification failed. Status code: 0`.
+  - **Reproduced here** with the real SDK 3.5.0 and a dummy key, Presage unreachable: the usage check fails with status 0, then the SDK raises error 5 (`kNetworkError`) and goes to the error state.
+  - **Why the message was misleading:** `bench:record` stored SDK errors silently and kept calling `sendFrame`, which then threw the generic "not in a valid state" message.
+  - **Fixed:**
+    - every SDK error and status change is now logged as it happens, with its name;
+    - feeding stops at the first terminal error with a summary ("stopped after N of M frames. First SDK error: 5 (networkError): …. No trace was written.");
+    - clips wider than 1280 px are scaled to 1280-wide before feeding (the SDK's pipeline is tuned for 720p);
+    - `WITNESS_SDK_VERBOSE=1` raises the SDK log level to info.
+  - Two new stub tests, plus the real-SDK reproduction above. On Greg's side, the open question is why the SDK couldn't reach Presage from `node` on his PC (network, VPN, or antivirus HTTPS scanning).

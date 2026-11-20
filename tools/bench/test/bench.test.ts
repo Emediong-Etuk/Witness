@@ -112,6 +112,46 @@ describe('record (stub SDK, ffmpeg-generated clip, no credits)', () => {
   });
 });
 
+describe('record: SDK failures and large clips', () => {
+  const mk = (d: string, name: string, size: string, secs: number) =>
+    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', `testsrc2=size=${size}:rate=30`, '-t', String(secs), '-c:v', 'libx264', '-pix_fmt', 'yuv420p', join(d, name)]);
+  const baseStub = (onSend: (h: Record<string, (...a: never[]) => void>, n: number, w: number, hgt: number) => boolean): SdkFactory => () => {
+    const h: Record<string, (...a: never[]) => void> = {};
+    let n = 0;
+    const sdk: NodeSdkLike = {
+      on: (ev, cb) => (h[ev] = cb), useCustomInput: () => sdk, start: () => {},
+      sendFrame: (_b, w, hgt) => onSend(h, ++n, w, hgt),
+      stopAsync: async () => {}, destroy: async () => {},
+    };
+    return { sdk, version: 'stub-0', decode: () => ({}), pixelFormatRGB: 0 };
+  };
+  it('stops at the first SDK error, names it, and writes no trace', async () => {
+    const d = tmp();
+    mk(d, 'Z2.mp4', '320x180', 3);
+    let sends = 0;
+    const logs: string[] = [];
+    const stub = baseStub((h, n) => {
+      sends = n;
+      if (n === 10) (h.error as unknown as (c: number, m: string, r: boolean) => void)(5, 'network unreachable', true);
+      if (n > 10) throw new Error('SmartSpectra is not in a valid state for this operation');
+      return true;
+    });
+    await expect(recordClip({ clip: clip('Z2', 'baseline', 'calibration', { file: 'Z2.mp4' }), clipsDir: d, tracesDir: d, apiKey: 'x', createSdk: stub, speed: 0, settleMs: 5, stub: true, log: (s) => logs.push(s) }))
+      .rejects.toThrow(/after 10 of 90 frames\. First SDK error: 5 \(networkError\): network unreachable\. No trace was written/);
+    expect(sends).toBe(10);
+    expect(logs.some((l) => l.includes('SDK error 5 (networkError)'))).toBe(true);
+    expect(() => readFileSync(join(d, 'Z2.jsonl'))).toThrow();
+  });
+  it('scales clips wider than 1280 to 1280-wide frames before sending', async () => {
+    const d = tmp();
+    mk(d, 'Z3.mp4', '1920x1080', 1);
+    const sizes = new Set<string>();
+    const r = await recordClip({ clip: clip('Z3', 'baseline', 'calibration', { file: 'Z3.mp4' }), clipsDir: d, tracesDir: d, apiKey: 'x', createSdk: baseStub((_h, _n, w, hgt) => (sizes.add(`${w}x${hgt}`), true)), speed: 0, settleMs: 5, stub: true });
+    expect([...sizes]).toEqual(['1280x720']);
+    expect(r.meta).toMatchObject({ width: 1280, height: 720, framesSent: 30 });
+  });
+});
+
 describe('calibrate → report on labelled SYNTHETIC traces (pipeline test, not a result)', { timeout: 120_000 }, () => {
   const mk = (id: string, s: Scenario, c: ManifestClip, seed: number): ClipTrace => {
     const lines = syntheticTrace(s, { mode: 'full', seed }) as TraceLine[];

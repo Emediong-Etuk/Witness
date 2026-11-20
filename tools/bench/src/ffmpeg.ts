@@ -21,10 +21,25 @@ export function probe(file: string): Probe {
   return { width: s.width, height: s.height, ptsS };
 }
 
-/** Decode to packed RGB24 frames, one Buffer per frame, in decode order (no frame-rate conversion). */
-export async function* rgbFrames(file: string, width: number, height: number): AsyncGenerator<Buffer> {
+/** The SDK's pipeline is tuned for 1280×720; larger clips are scaled down to this width. */
+export const MAX_FEED_WIDTH = 1280;
+
+/** Output size for feeding: at most MAX_FEED_WIDTH wide, aspect kept, even dimensions. */
+export function feedSize(width: number, height: number): { width: number; height: number } {
+  if (width <= MAX_FEED_WIDTH) return { width, height };
+  const h = Math.round((height * MAX_FEED_WIDTH) / width / 2) * 2;
+  return { width: MAX_FEED_WIDTH, height: h };
+}
+
+/**
+ * Decode to packed RGB24 frames, one Buffer per frame, in presentation order
+ * (no frame-rate conversion). With a size different from the source, frames
+ * are scaled to it.
+ */
+export async function* rgbFrames(file: string, width: number, height: number, scale = false): AsyncGenerator<Buffer> {
   const size = width * height * 3;
-  const ff = spawn('ffmpeg', ['-v', 'error', '-i', file, '-map', '0:v:0', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-fps_mode', 'passthrough', '-'], {
+  const vf = scale ? ['-vf', `scale=${width}:${height}:flags=bicubic`] : [];
+  const ff = spawn('ffmpeg', ['-v', 'error', '-i', file, '-map', '0:v:0', ...vf, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-fps_mode', 'passthrough', '-'], {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let err = '';
