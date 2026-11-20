@@ -2,7 +2,7 @@
 
 Witness is a desktop app built on Presage's SmartSpectra SDK. It shows a pulse, breathing rate or HRV value **only when the entire analysis window behind it passed every documented condition**: still, quiet, steady light, one continuous face, enough frames, SDK confident. Every shown number carries an evidence receipt that anyone can recompute. Every withheld number gets a plain reason and a countdown. The rule is enforced in code (`packages/gate`), not in the UI.
 
-**Judge site (no install, no key):** [witness-nine.vercel.app](https://witness-nine.vercel.app) · **Event:** Presage SmartSpectra SDK Challenge on DEV (`#presagechallenge`), Best Thoughtful Real-World Use · **License:** MIT
+**Judge site (no install, no key):** [witness-nine.vercel.app](https://witness-nine.vercel.app) · **Videos:** [demo, 2:48](https://youtu.be/t9cM9Yxl6Xg) · [technical walkthrough, 3:29](https://youtu.be/8R1XOzlivdc) · **Event:** Presage SmartSpectra SDK Challenge on DEV (`#presagechallenge`), Best Thoughtful Real-World Use · **License:** MIT
 
 General wellness information, not medical advice.
 

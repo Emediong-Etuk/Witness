@@ -7,7 +7,6 @@ tags: presagechallenge, devchallenge, electron, typescript
 *This is a submission for the [Presage SmartSpectra SDK Challenge](https://dev.to/challenges/presage).*
 
 <!-- Before publishing:
-  - add the two YouTube links (pitch embed + walkthrough link)
   - add the cover image
   - check the challenge link above points to the right challenge page
   - read the "A note on testing" section once more -->
@@ -20,9 +19,9 @@ SmartSpectra turns 12 seconds of video into a pulse, 30 seconds into a breathing
 
 ## Demo
 
-{% youtube PITCH_VIDEO_ID %}
+{% youtube t9cM9Yxl6Xg %}
 
-- **Technical walkthrough (3:29):** WALKTHROUGH_VIDEO_URL
+- **Technical walkthrough (3:29):** [youtu.be/8R1XOzlivdc](https://youtu.be/8R1XOzlivdc)
 - **Judge site (no install):** [witness-nine.vercel.app](https://witness-nine.vercel.app). It has a guided tour, a Replay Lab where you can watch the gate withhold contaminated readings, an in-browser verifier with a tamper playground, and a flicker tool for reproducing the light test.
 
 ## A note on testing

@@ -30,7 +30,11 @@ test('every route renders by deep link, with no errors and no third-party reques
 test('no invented numbers: headline values are TBD until results exist', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-tour="measured"] .tbd')).toHaveCount(4);
-  await expect(page.getByTestId('video-pitch')).toContainText('Publishing');
+  await expect(page.getByTestId('video-pitch')).toContainText('Plays from youtube-nocookie.com');
+  // nothing loads from YouTube until play is pressed, and then only the privacy-enhanced domain
+  expect(await page.locator('iframe').count()).toBe(0);
+  await page.getByTestId('video-pitch').getByRole('button', { name: /Play/ }).click();
+  await expect(page.locator('iframe[src^="https://www.youtube-nocookie.com/embed/t9cM9Yxl6Xg"]')).toHaveCount(1);
 });
 
 test('guided tour walks every step across pages, then finishes', async ({ page }) => {
