@@ -22,6 +22,7 @@
     "build:desktop": "npm run build -w @witness/desktop",
     "e2e:ui": "playwright test --trace off",
     "bench": "tsx tools/bench/src/cli.ts",
+    "bench:add-clip": "tsx tools/bench/src/cli.ts add-clip",
     "bench:estimate": "tsx tools/bench/src/cli.ts estimate",
     "bench:record": "tsx tools/bench/src/cli.ts record",
     "bench:replay": "tsx tools/bench/src/cli.ts replay",

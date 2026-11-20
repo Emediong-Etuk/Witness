@@ -14,7 +14,7 @@ tags: presagechallenge, devchallenge, electron, typescript
 
 ## What I Built
 
-SmartSpectra turns 12 seconds of video into a pulse, 30 seconds into a breathing rate and 60 seconds into HRV. Its own model cards warn that motion, chewing and flickering light can produce wrong values *with high confidence*, but only motion has one of its 14 warning codes. A 3-second disturbance (a cough, a bite of food, a TV flickering behind you) lands inside every reading whose window covers it, and the number hides it. An app that trusts the SDK's `stable` flag can show a contaminated reading as reliable.
+SmartSpectra turns 12 seconds of video into a pulse, 30 seconds into a breathing rate and 60 seconds into HRV. Its own model cards warn that motion, chewing and flickering light can produce wrong values *with high confidence*, but of those three, only motion has a validation code (`EXCESSIVE_MOTION`). A 3-second disturbance (a cough, a bite of food, a TV flickering behind you) lands inside every reading whose window covers it, and the number hides it. An app that trusts the SDK's `stable` flag can show a contaminated reading as reliable.
 
 **Witness** is a desktop app that shows a pulse, breathing rate or HRV value only when the **entire** window behind it passed every documented condition: still, quiet, steady light, one continuous face, enough frames, SDK confident. I call this the Clean-Window Gate. Every number it shows comes with an **evidence receipt**: the checks it passed, the window, and hashes that chain to the previous receipt, so anyone can recompute it. Every number it withholds gets a plain reason ("You spoke. Breathing can't be measured while you talk.") and a countdown to when its window will be clean again.
 
@@ -22,7 +22,7 @@ SmartSpectra turns 12 seconds of video into a pulse, 30 seconds into a breathing
 
 {% youtube PITCH_VIDEO_ID %}
 
-- **Technical walkthrough (about 5 min):** WALKTHROUGH_VIDEO_URL
+- **Technical walkthrough (3:20):** WALKTHROUGH_VIDEO_URL
 - **Judge site (no install):** [witness-nine.vercel.app](https://witness-nine.vercel.app). It has a guided tour, a Replay Lab where you can watch the gate withhold contaminated readings, an in-browser verifier with a tamper playground, and a flicker tool for reproducing the light test.
 
 ## A note on testing
@@ -31,7 +31,7 @@ I couldn't complete a live check-in on my own computer. Its webcam gives about 1
 
 Witness now runs a free **camera check** before the SDK starts, which also tries lower resolutions, so a camera like mine is caught before any Presage minutes are spent. Mine couldn't reach 25 fps at any of them.
 
-So this submission has **no reading from a real camera yet**, and the held-out results on the site and in the README say TBD rather than show numbers I don't have. **Please try it on your own laptop or USB webcam.** Most give 25 fps or more in normal light, and the camera check will tell you for free.
+So this submission has **no reading from a real camera yet**, and the held-out results on the site and in the README say TBD rather than show numbers I don't have. **Please try it on your own laptop or USB webcam.** Many give 25 fps or more in good light, and the camera check will tell you for free.
 
 What I could verify without a live camera:
 - the full app on labelled synthetic replays, in Electron and in the browser;

@@ -44,7 +44,7 @@ export function Home() {
           </Reveal>
           <Reveal delay={0.12}>
             <p className="mt-6 text-lg leading-relaxed text-muted" data-tour="problem">
-              SmartSpectra turns <b className="text-ink">12 s</b> of video into a pulse, <b className="text-ink">30 s</b> into a breathing rate and <b className="text-ink">60 s</b> into HRV, and its own model cards warn that motion, chewing and flickering light can produce wrong values <i>with high confidence</i>. Only motion has one of its 14 warning codes. So an app that trusts <code className="text-ink">stable</code> can show a contaminated reading as reliable.
+              SmartSpectra turns <b className="text-ink">12 s</b> of video into a pulse, <b className="text-ink">30 s</b> into a breathing rate and <b className="text-ink">60 s</b> into HRV, and its own model cards warn that motion, chewing and flickering light can produce wrong values <i>with high confidence</i>. Of those three, only motion has a validation code. So an app that trusts <code className="text-ink">stable</code> can show a contaminated reading as reliable.
             </p>
           </Reveal>
           <Reveal delay={0.18}>
@@ -55,7 +55,7 @@ export function Home() {
           </Reveal>
           <Reveal delay={0.24}>
             <div className="mt-7 flex flex-wrap gap-3">
-              <a href="#videos" className="btn btn-primary" data-testid="cta-watch">▶ Watch the 3-minute demo</a>
+              <a href="#videos" className="btn btn-primary" data-testid="cta-watch">▶ Watch the 2-minute demo</a>
               <Link to="/verify" className="btn" data-testid="cta-verify">Verify our results in your browser →</Link>
             </div>
           </Reveal>

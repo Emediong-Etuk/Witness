@@ -5,6 +5,7 @@ import { join, relative } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { GATE_V1, type GateConfig } from '@witness/gate';
 import { ManifestSchema, type Manifest } from '@witness/schema';
+import { buildClipEntry } from './add-clip.js';
 import { calibrate, type ClipTrace } from './calibrate.js';
 import { probe } from './ffmpeg.js';
 import { freezeStatus } from './git.js';
@@ -14,7 +15,7 @@ import { recordClip } from './record.js';
 import { buildReport, encodeReceipts, fillMarkers, renderTables, replayTrace } from '@witness/bench-core';
 import { configHash } from '@witness/gate';
 import { apiKeyFromEnv, realSdk } from './sdk-node.js';
-import { readTrace } from './trace-io.js';
+import { readTrace, sha256File } from './trace-io.js';
 
 const P = defaultPaths();
 const argv = process.argv.slice(2);
@@ -68,6 +69,42 @@ function gitHead(): string | null {
 async function main() {
   const m = loadManifest(P.manifest);
   switch (cmd) {
+    case 'add-clip': {
+      // A clip recorded elsewhere (e.g. a phone), copied into corpus/clips/. Offline: no SDK, no credits.
+      const id = opt('id');
+      const file = opt('file');
+      if (!id || !file) {
+        throw new Error('usage: bench add-clip --id B1 --file B1.mp4 --condition baseline --split calibration --i-consent [--interval talking:25-45] [--title ...] [--camera ...] [--lighting ...] [--subject S1] [--whole-clip] [--publish-video] [--fitzpatrick 1-6]');
+      }
+      const path = join(P.clips, file);
+      if (!existsSync(path)) throw new Error(`${relative(REPO, path)} not found: copy the video into corpus/clips/ first`);
+      const pr = probe(path);
+      const intervals: string[] = [];
+      argv.forEach((a, i) => a === '--interval' && argv[i + 1] && intervals.push(argv[i + 1]!));
+      const fz = opt('fitzpatrick');
+      const { clip, fps, durationS } = buildClipEntry({
+        id, file,
+        title: opt('title') ?? `${opt('condition') ?? 'baseline'} (phone)`,
+        condition: (opt('condition') ?? 'baseline') as never,
+        split: (opt('split') ?? 'calibration') as 'calibration' | 'heldout',
+        intervals,
+        wholeClip: flag('whole-clip'),
+        camera: opt('camera') ?? 'phone front camera',
+        lighting: opt('lighting') ?? 'not recorded',
+        subject: opt('subject') ?? 'S1',
+        consent: flag('i-consent'),
+        publishVideo: flag('publish-video'),
+        fitzpatrick: fz ? Number(fz) : null,
+        notes: opt('notes'),
+        at: new Date().toISOString(),
+      }, { ...pr, sha256: sha256File(path) }, m);
+      m.clips.push(clip);
+      writeFileSync(P.manifest, JSON.stringify(ManifestSchema.parse(m), null, 2) + '\n');
+      console.log(`  ${clip.id}: ${clip.condition}, ${clip.split}, ${durationS.toFixed(1)} s at ${fps.toFixed(1)} fps, ${clip.resolution}, sha256 ${clip.sha256.clip!.slice(0, 19)}…`);
+      console.log(`  Added to corpus/manifest.json. The video itself stays in corpus/clips/ (gitignored); publishVideo=${clip.consent.publishVideo}.`);
+      console.log(`  Next: npm run bench:estimate -- --clip ${clip.id}`);
+      return;
+    }
     case 'estimate':
     case 'record': {
       const ids = flag('all') ? m.clips.map((c) => c.id) : (opt('clip') ?? '').split(',').filter(Boolean);
@@ -162,7 +199,7 @@ async function main() {
       return;
     }
     default:
-      console.log('usage: bench <estimate|record|replay [--write]|calibrate [--write]|report|docs> [options]');
+      console.log('usage: bench <add-clip|estimate|record|replay [--write]|calibrate [--write]|report|docs> [options]');
       process.exitCode = 1;
   }
 }

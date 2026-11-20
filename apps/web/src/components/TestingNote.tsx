@@ -18,7 +18,7 @@ export function TestingNote({ compact = false }: { compact?: boolean }) {
       </p>
       <p className="mt-3 text-[15px] leading-relaxed">
         So this submission has <b>no reading from a real camera yet</b>, and the held-out results on this site say TBD rather than show numbers
-        I don't have. Please test Witness on your own laptop or USB webcam. Most give 25 fps or more in normal light, and the camera check
+        I don't have. Please test Witness on your own laptop or USB webcam. Many give 25 fps or more in good light, and the camera check
         tells you for free, before any Presage minutes are used.
       </p>
       {!compact ? (

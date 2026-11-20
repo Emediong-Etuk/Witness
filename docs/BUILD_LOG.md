@@ -315,3 +315,21 @@ So recorder output feeds straight into the bench.
   - The note also lists what was verified without a live camera: synthetic replays in real Electron and in the browser build; the camera check and SDK hand-off with Chromium's simulated camera; the gate, receipts and verifier in CI.
 - Also corrected on the Run page: option B pointed to GitHub Releases, but packaging was never done, so there are no installers. `SITE.releasesUrl` is now `null`, and the card says installers aren't published and points to option C. The README's run section now has the full from-source steps, the 25 fps requirement and the Windows notes.
 - The "Start with the videos" tour step no longer promises "live SmartSpectra signals" in the demo.
+
+### Pre-submission judging and fixes (2026-11-20)
+- Ran a strict hackathon-judge pass. It scored **66/100**, "not ready". The blockers:
+  - **No live SDK signal anywhere.** All readings on screen come from synthetic replays, and `corpus/traces/` is empty.
+  - **Placeholder video IDs** in the DEV post and on the site.
+  - **Contradicted claims:** the Releases link on the live site, the walkthrough length, and the "14 warning codes" count.
+- **Fixed now:**
+  - **README first screen rewritten:**
+    - what it is and the one rule, plus the judge site link;
+    - "Judges, start here" do/see steps, which need no key;
+    - the testing note, now with evidence (`docs/evidence/2026-11-19-first-check-in-error-14.png`);
+    - a real-vs-simulated table;
+    - an AI-assistance statement and a docs index.
+  - **"14 warning codes" reworded.** The SDK's `.d.ts` lists 15 non-OK validation codes, including CAMERA_TUNING, so the count depends on definitions. Every place now says "of those three conditions, only motion has a validation code (EXCESSIVE_MOTION)".
+  - **"Most webcams give 25 fps" → "many … in good light".** It wasn't measured.
+  - **Video lengths now match the files:** pitch 2:22, walkthrough 3:20 (the site config, the DEV post, the CTA and the tour).
+  - **`TODO(verify)` on the landmark indices** replaced with a stated, unverified assumption.
+- **New: `npm run bench:add-clip`.** It registers a clip recorded elsewhere (e.g. a phone) in the manifest. It's offline: it probes the file, refuses anything below 25 fps, without `--i-consent`, duplicate IDs, or labels past the end of the clip, then hashes the file and writes a schema-valid entry. 5 tests, including real ffmpeg-made 30 fps and 15 fps clips. This is the route to a real SDK trace when no webcam reaches 25 fps.
