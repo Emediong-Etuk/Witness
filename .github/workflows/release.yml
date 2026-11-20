@@ -1,0 +1,97 @@
+name: release
+
+# Builds unsigned installers on each OS. On a v* tag, publishes them as a
+# GitHub Release with SHA256SUMS. On pull requests that touch packaging, it
+# only builds them (as workflow artifacts) to prove packaging still works.
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'tools/package/**'
+      - '.github/workflows/release.yml'
+      - 'apps/desktop/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: windows-x64, os: windows-latest, flag: --win }
+          - { name: macos-arm64, os: macos-14, flag: --mac }
+          - { name: linux-x64, os: ubuntu-24.04, flag: --linux }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Build the app
+        run: npm run build:desktop
+      - name: Stage the app with its pinned runtime dependencies
+        run: node tools/package/stage.mjs "${{ runner.temp }}/stage"
+      - name: Package (unsigned)
+        run: npx -y electron-builder@26.18.1 --projectDir "${{ runner.temp }}/stage" ${{ matrix.flag }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Check the bundled SmartSpectra runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${{ runner.temp }}/stage/release"
+          case "${{ matrix.name }}" in
+            windows-x64) test -f win-unpacked/resources/smartspectra/smartspectra_capi.dll ;;
+            macos-arm64) test -f mac-arm64/Witness.app/Contents/Resources/smartspectra/libsmartspectra_capi.dylib ;;
+            linux-x64)   test -f linux-unpacked/resources/smartspectra/libsmartspectra_capi.so ;;
+          esac
+          ls -la
+      - uses: actions/upload-artifact@v4
+        with:
+          name: witness-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/stage/release/*.exe
+            ${{ runner.temp }}/stage/release/*.dmg
+            ${{ runner.temp }}/stage/release/*.AppImage
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cat > notes.md <<'EOF'
+          Unsigned installers for Witness, built by this repository's `release` workflow from the tagged commit. Check them against `SHA256SUMS`.
+
+          - **Windows (x64):** run the setup `.exe`. SmartScreen may warn about an unknown publisher: choose **More info → Run anyway**.
+          - **macOS (Apple Silicon):** open the `.dmg` and drag Witness to Applications. On first launch macOS blocks unsigned apps: open **System Settings → Privacy & Security** and choose **Open Anyway**.
+          - **Linux (x64):** `chmod +x` the `.AppImage` and run it.
+
+          You need your own free SmartSpectra API key (physiology.presagetech.com/auth/register). The app asks for it on first launch and stores it encrypted by your OS. You also need a camera that gives 25 fps or more; the app checks this for free before the SDK starts. General wellness information, not medical advice.
+          EOF
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "Witness $TAG" --notes-file notes.md
