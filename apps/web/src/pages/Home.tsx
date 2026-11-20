@@ -7,6 +7,7 @@ import { HeroRings } from '../components/HeroRings';
 import { Num } from '../components/Num';
 import { Reveal, SectionHead } from '../components/Reveal';
 import { RulesTable } from '../components/RulesTable';
+import { TestingNote } from '../components/TestingNote';
 import { VideoCard } from '../components/VideoCard';
 import { WindowExplainer } from '../components/WindowExplainer';
 import { gateConfig, gateHash, recordedCount, sdkVersion, stage } from '../lib/data';
@@ -116,6 +117,7 @@ export function Home() {
       {/* PROOF / STATUS */}
       <section className="mx-auto max-w-6xl px-5 py-16">
         <SectionHead eyebrow="Status, in the open" title="Where the evidence stands today." />
+        <Reveal className="mb-8" y={0}><div data-tour="testing-note"><TestingNote /></div></Reveal>
         <Reveal>
           <ol className="card grid gap-0 overflow-hidden md:grid-cols-4" data-tour="stage" aria-label="Bench progress">
             {STAGES.map((s, i) => {

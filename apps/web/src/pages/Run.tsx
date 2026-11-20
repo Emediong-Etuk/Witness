@@ -1,4 +1,5 @@
 import { CopyBlock } from '../components/CopyBlock';
+import { TestingNote } from '../components/TestingNote';
 import { Reveal, SectionHead } from '../components/Reveal';
 import { Link } from '../lib/router';
 import { SITE } from '../site.config';
@@ -7,6 +8,7 @@ export function Run() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-14">
       <SectionHead eyebrow="Run it in 5 minutes" title="Four ways in, from zero setup to reproducing the bench." />
+      <Reveal className="mb-8"><TestingNote compact /></Reveal>
       <div className="grid gap-6 md:grid-cols-2" data-tour="run-paths">
         <Reveal className="card card-hover p-6">
           <p className="font-mono text-xs text-verified">A · no setup · 1 min</p>
@@ -20,15 +22,22 @@ export function Run() {
         </Reveal>
         <Reveal delay={0.05} className="card card-hover p-6">
           <p className="font-mono text-xs text-verified">B · the app · 5 min</p>
-          <h3 className="mt-1 text-xl font-medium">Download for your computer</h3>
-          <p className="mt-2 text-sm text-muted">macOS (Apple Silicon), Windows x64 or Linux x64. Open it, paste a free SmartSpectra key, and press <b>Check in</b>. Intel Macs aren't supported by the SDK.</p>
-          <a href={SITE.releasesUrl} className="btn btn-primary mt-4 py-1.5 text-sm">Releases and SHA-256 sums</a>
-          <p className="mt-3 text-xs text-muted">Builds are unsigned. macOS: right-click the app → Open. Windows: SmartScreen → More info → Run anyway. Free key: physiology.presagetech.com/auth/register</p>
+          <h3 className="mt-1 text-xl font-medium">{SITE.releasesUrl ? 'Download for your computer' : 'Installers: not published yet'}</h3>
+          {SITE.releasesUrl ? (
+            <>
+              <p className="mt-2 text-sm text-muted">macOS (Apple Silicon), Windows x64 or Linux x64. Open it, paste a free SmartSpectra key, and press <b>Check in</b>. Intel Macs aren't supported by the SDK.</p>
+              <a href={SITE.releasesUrl} className="btn btn-primary mt-4 py-1.5 text-sm">Releases and SHA-256 sums</a>
+              <p className="mt-3 text-xs text-muted">Builds are unsigned. macOS: right-click the app → Open. Windows: SmartScreen → More info → Run anyway. Free key: physiology.presagetech.com/auth/register</p>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-muted" data-testid="no-installers">Use option C to run the app from source; it takes a few minutes with Node 24. Free key: physiology.presagetech.com/auth/register</p>
+          )}
         </Reveal>
         <Reveal delay={0.1} className="card p-6">
           <p className="font-mono text-xs text-verified">C · from source</p>
           <h3 className="mb-3 mt-1 text-xl font-medium">Node 24, any supported OS</h3>
           <CopyBlock code={'git clone https://github.com/Emediong-Etuk/Witness\ncd Witness && npm ci\ncp .env.example .env   # paste your own key\nnpm run dev -w @witness/desktop'} />
+          <p className="mt-3 text-xs text-muted">Needs a camera that gives 25 fps or more (SmartSpectra's floor). The app checks this before the SDK starts, for free. Windows: copy instead of cp, and run it from a normal terminal.</p>
         </Reveal>
         <Reveal delay={0.15} className="card p-6">
           <p className="font-mono text-xs text-verified">D · reproduce</p>

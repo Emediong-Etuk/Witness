@@ -37,12 +37,12 @@ test('guided tour walks every step across pages, then finishes', async ({ page }
   await page.goto('/');
   await page.getByTestId('tour-start').click();
   const card = page.getByTestId('tour-card');
-  await expect(card).toContainText('Step 1 of 19');
+  await expect(card).toContainText('Step 1 of 20');
   const seenRoutes = new Set<string>();
-  for (let i = 1; i < 19; i++) {
+  for (let i = 1; i < 20; i++) {
     if (i % 2) await page.getByTestId('tour-next').click();
     else await page.keyboard.press('ArrowRight');
-    await expect(card).toContainText(`Step ${i + 1} of 19`);
+    await expect(card).toContainText(`Step ${i + 1} of 20`);
     seenRoutes.add(new URL(page.url()).pathname);
   }
   expect([...seenRoutes].sort()).toEqual(['/', '/privacy', '/replay', '/results', '/run', '/tools/flicker', '/verify']);
