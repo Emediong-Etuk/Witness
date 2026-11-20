@@ -17,15 +17,21 @@ export function TestingNote({ compact = false }: { compact?: boolean }) {
         before the SDK starts, and it tried lower resolutions, but this webcam couldn't reach 25 fps at any of them.
       </p>
       <p className="mt-3 text-[15px] leading-relaxed">
-        So this submission has <b>no reading from a real camera yet</b>, and the held-out results on this site say TBD rather than show numbers
-        I don't have. Please test Witness on your own laptop or USB webcam. Most give 25 fps or more in normal light, and the camera check
-        tells you for free, before any Presage minutes are used.
+        So I recorded two consented 60-second clips of myself on my phone (30 fps) and fed them through the <b>real SmartSpectra SDK</b>.
+        The <Link to="/replay" className="underline">Replay Lab</Link> opens on them, and the verifier recomputes every receipt.
+        On the still clip, Witness verified one SDK pulse reading. On the talking clip, it withheld every reading the SDK marked
+        <code> stable</code>. Two clips without an oximeter reference aren't a held-out result, so the results on this site still say TBD.
+      </p>
+      <p className="mt-3 text-[15px] leading-relaxed">
+        A live check-in from a webcam is still untested by me. Please try Witness on your own laptop or USB webcam. Many give 25 fps or
+        more in good light, and the camera check tells you for free, before any Presage minutes are used.
       </p>
       {!compact ? (
         <>
-          <p className="mt-4 text-sm font-medium">What was verified without a live camera</p>
+          <p className="mt-4 text-sm font-medium">What else was verified without a live webcam</p>
           <ul className="mt-2 grid gap-1.5 text-sm text-muted">
             <li>· The full app on labelled synthetic replays, in the real Electron app and in the browser build (UI tests in CI).</li>
+            <li>· The bench path on real SDK output: phone clips stored sideways are decoded upright, and SDK errors are reported by name.</li>
             <li>· The camera check and the hand-off to the SDK, in real Electron with Chromium's simulated camera. A 15 fps feed is held back; a 30 fps feed starts the real SmartSpectra SDK on that stream.</li>
             <li>· The gate, receipts, hash chain and verifier, by the unit and property tests in CI and by the in-browser verifier on this site.</li>
           </ul>

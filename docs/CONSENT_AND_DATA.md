@@ -58,6 +58,6 @@ The Electron app cancels every network request from its own pages except `app://
 
 ## 6. Limits we know about
 
-- **No real-camera reading yet.** The author's webcam gives about 16 fps, and the SDK needs 25 fps or more (see the README note to judges). The bench corpus and held-out results are therefore TBD.
+- **No live webcam reading yet.** The author's webcam gives about 16 fps, and the SDK needs 25 fps or more (see the README note to judges). Two consented phone clips of the author were processed through the real SDK instead. Their videos stay private (`publishVideo: false`), and only the traces and receipts are published. The held-out results are TBD.
 - **Egress and auto-insight behaviour not measured.** Until the egress audit runs, section 4 states what the SDK's code and docs say, not what was observed on the wire.
 - **Accuracy limits.** Camera vitals vary with skin tone, lighting and camera. Thresholds are calibrated on a small corpus and can't catch every failure.

@@ -192,7 +192,9 @@ export function verifyAll(inp: VerifyInput): VerifyReport {
 
   // ---- generated egress table
   if (inp.egress) {
-    const block = inp.egress.doc ? extractBetween(inp.egress.doc, EGRESS_MARKERS[0], EGRESS_MARKERS[1]) : null;
+    // Windows checkouts may turn LF into CRLF; the table is compared as text, so normalise first.
+    const doc = inp.egress.doc?.replace(/\r\n/g, '\n') ?? null;
+    const block = doc ? extractBetween(doc, EGRESS_MARKERS[0], EGRESS_MARKERS[1]) : null;
     if (block === null) add('docs.EGRESS.md', 'skip', 'no egress table markers');
     else {
       try {

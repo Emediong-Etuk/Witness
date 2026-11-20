@@ -23,6 +23,17 @@ The lab recorder (`tools/lab-recorder`, dev-only, never packaged) works like thi
 - **Labels** are the cue times widened by ±1 s for reaction time (`REACTION_PAD_S`). That's conservative: more readings count as contaminated.
 - **Flicker page:** `/flicker`, or download `/flicker-standalone.html` and open it on a phone. It has a photosensitivity gate, a 3 Hz cap and smooth sine brightness.
 
+## Adding a clip recorded on a phone
+
+If no webcam reaches the SDK's 25 fps floor, record on a phone instead (most record 30 fps), copy the file into `corpus/clips/`, and register it:
+
+```bash
+npm run bench:add-clip -- --id B1 --file B1.mp4 --condition baseline --split calibration --i-consent --lighting "daylight, window in front"
+npm run bench:add-clip -- --id T1 --file T1.mp4 --condition talking --interval talking:25-45 --split calibration --i-consent
+```
+
+`add-clip` is offline: no SDK and no credits. It probes the file, refuses anything below 25 fps, checks that labels fall inside the clip, hashes it, and writes a schema-valid, consent-attested entry. The video stays in `corpus/clips/` (gitignored). `--publish-video` is off unless you pass it. `groundTruth` stays `null` unless oximeter readings are added.
+
 ## Clip plan (BUILD_PROMPT §13.2)
 
 The minimum viable set is marked ★. Each condition gets at least one clip in each split.

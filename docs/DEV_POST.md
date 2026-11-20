@@ -7,22 +7,21 @@ tags: presagechallenge, devchallenge, electron, typescript
 *This is a submission for the [Presage SmartSpectra SDK Challenge](https://dev.to/challenges/presage).*
 
 <!-- Before publishing:
-  - add the two YouTube links (pitch embed + walkthrough link)
   - add the cover image
   - check the challenge link above points to the right challenge page
   - read the "A note on testing" section once more -->
 
 ## What I Built
 
-SmartSpectra turns 12 seconds of video into a pulse, 30 seconds into a breathing rate and 60 seconds into HRV. Its own model cards warn that motion, chewing and flickering light can produce wrong values *with high confidence*, but only motion has one of its 14 warning codes. A 3-second disturbance (a cough, a bite of food, a TV flickering behind you) lands inside every reading whose window covers it, and the number hides it. An app that trusts the SDK's `stable` flag can show a contaminated reading as reliable.
+SmartSpectra turns 12 seconds of video into a pulse, 30 seconds into a breathing rate and 60 seconds into HRV. Its own model cards warn that motion, chewing and flickering light can produce wrong values *with high confidence*, but of those three, only motion has a validation code (`EXCESSIVE_MOTION`). A 3-second disturbance (a cough, a bite of food, a TV flickering behind you) lands inside every reading whose window covers it, and the number hides it. An app that trusts the SDK's `stable` flag can show a contaminated reading as reliable.
 
 **Witness** is a desktop app that shows a pulse, breathing rate or HRV value only when the **entire** window behind it passed every documented condition: still, quiet, steady light, one continuous face, enough frames, SDK confident. I call this the Clean-Window Gate. Every number it shows comes with an **evidence receipt**: the checks it passed, the window, and hashes that chain to the previous receipt, so anyone can recompute it. Every number it withholds gets a plain reason ("You spoke. Breathing can't be measured while you talk.") and a countdown to when its window will be clean again.
 
 ## Demo
 
-{% youtube PITCH_VIDEO_ID %}
+{% youtube t9cM9Yxl6Xg %}
 
-- **Technical walkthrough (about 5 min):** WALKTHROUGH_VIDEO_URL
+- **Technical walkthrough (3:29):** [youtu.be/8R1XOzlivdc](https://youtu.be/8R1XOzlivdc)
 - **Judge site (no install):** [witness-nine.vercel.app](https://witness-nine.vercel.app). It has a guided tour, a Replay Lab where you can watch the gate withhold contaminated readings, an in-browser verifier with a tamper playground, and a flicker tool for reproducing the light test.
 
 ## A note on testing
@@ -31,9 +30,15 @@ I couldn't complete a live check-in on my own computer. Its webcam gives about 1
 
 Witness now runs a free **camera check** before the SDK starts, which also tries lower resolutions, so a camera like mine is caught before any Presage minutes are spent. Mine couldn't reach 25 fps at any of them.
 
-So this submission has **no reading from a real camera yet**, and the held-out results on the site and in the README say TBD rather than show numbers I don't have. **Please try it on your own laptop or USB webcam.** Most give 25 fps or more in normal light, and the camera check will tell you for free.
+So I recorded two consented 60-second clips of myself on my phone (30 fps) and fed them through the **real SmartSpectra SDK 3.5.0** with Witness's bench tool. Those traces and their receipts are in the repo, and the Replay Lab opens on them.
+- **The still clip:** Witness verified one SDK pulse reading, 78 bpm (`corpus/receipts/B1.jsonl`).
+- **The clip where I read aloud from 0:25 to 0:45:** Witness withheld every reading the SDK marked `stable` (`corpus/receipts/T1.jsonl`). Breathing was withheld with "You spoke" while speech was inside its window. After the talking, the SDK's pulse dropped by about 20 bpm while some readings stayed `stable`, and Witness withheld those because the window held motion and non-OK validation codes.
 
-What I could verify without a live camera:
+Two clips with no oximeter reference are not an accuracy result. The thresholds are still uncalibrated starting values, and on the still clip, where nothing was disturbing the reading, the steady-light rule still withheld readings. That's a sign its starting threshold is too strict for phone video. So the held-out results still say TBD.
+
+A live check-in from a webcam is still untested by me. **Please try it on your own laptop or USB webcam.** Many give 25 fps or more in good light, and the camera check will tell you for free.
+
+What else I could verify without a live webcam:
 - the full app on labelled synthetic replays, in Electron and in the browser;
 - the camera check and the hand-off to the real SDK, in Electron with Chromium's simulated camera: a 15 fps feed is held back, and a 30 fps feed starts the real SDK on that stream;
 - the gate, the receipts, the hash chain and the verifier, through the unit, property and UI tests in CI.

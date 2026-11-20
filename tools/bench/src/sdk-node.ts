@@ -33,7 +33,7 @@ export const realSdk: SdkFactory = (o) => {
     SmartSpectraSDK: (new (opts: object) => NodeSdkLike) & { version: string };
     PixelFormat: { kRGB: number };
     FrameTransform: { kNone: number };
-    SmartSpectraLogLevel: { kWarning: number };
+    SmartSpectraLogLevel: { kWarning: number; kInfo: number };
   };
   const msgs = req('@smartspectra/node-sdk/messages') as { decodeMetrics: (b: Uint8Array) => DecodedMetricsLike };
   const sdk = new m.SmartSpectraSDK({
@@ -41,7 +41,7 @@ export const realSdk: SdkFactory = (o) => {
     requestedMetrics: o.requestedMetrics,
     enableTelemetry: o.telemetry,
     enableAccumulatedOutput: false,
-    logLevel: m.SmartSpectraLogLevel.kWarning,
+    logLevel: process.env.WITNESS_SDK_VERBOSE === '1' ? m.SmartSpectraLogLevel.kInfo : m.SmartSpectraLogLevel.kWarning,
   });
   sdk.useCustomInput(m.FrameTransform.kNone);
   return { sdk, version: m.SmartSpectraSDK.version, decode: msgs.decodeMetrics, pixelFormatRGB: m.PixelFormat.kRGB };

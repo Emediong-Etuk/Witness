@@ -1,4 +1,65 @@
 {
   "v": 1,
-  "clips": []
+  "clips": [
+    {
+      "id": "B1",
+      "title": "Still and quiet, 60 s (phone)",
+      "condition": "baseline",
+      "split": "calibration",
+      "file": "B1.mp4",
+      "intervals": [],
+      "wholeClip": false,
+      "groundTruth": null,
+      "consent": {
+        "attested": true,
+        "subject": "S1",
+        "at": "2026-11-20T19:08:05.592Z",
+        "publishVideo": false
+      },
+      "subject": {
+        "fitzpatrick": null
+      },
+      "camera": "phone front camera",
+      "lighting": "not recorded",
+      "resolution": "1080x1920",
+      "sha256": {
+        "clip": "sha256:38ea98d75136b258874da5071ce246bf1bc8f86444c681195f5d3d2f0b097237",
+        "trace": "sha256:215d2ae3e2283a5ea30a80f074efc1cb9532ef720ea435444aef8793e5fe9ada"
+      },
+      "notes": "Recorded on a phone (30 fps; the author's webcam gives about 16 fps) and fed through the SDK with bench record. Stored sideways with a 90\u00b0 rotation flag; decoded upright."
+    },
+    {
+      "id": "T1",
+      "title": "Reading aloud from 25 to 45 s (phone)",
+      "condition": "talking",
+      "split": "calibration",
+      "file": "T1.mp4",
+      "intervals": [
+        {
+          "condition": "talking",
+          "fromS": 25,
+          "toS": 45
+        }
+      ],
+      "wholeClip": false,
+      "groundTruth": null,
+      "consent": {
+        "attested": true,
+        "subject": "S1",
+        "at": "2026-11-20T19:08:57.197Z",
+        "publishVideo": false
+      },
+      "subject": {
+        "fitzpatrick": null
+      },
+      "camera": "phone front camera",
+      "lighting": "not recorded",
+      "resolution": "1080x1920",
+      "sha256": {
+        "clip": "sha256:d4e7b17b7fd3e1849df40048246924bd4ef659e4d1698ab0133b3c045c33010f",
+        "trace": "sha256:ceb2df2ec9dff01522a653b181cbf0e1ca80c54c6dd00e24c7625151768fe360"
+      },
+      "notes": "Recorded on a phone (30 fps; the author's webcam gives about 16 fps) and fed through the SDK with bench record. Stored sideways with a 90\u00b0 rotation flag; decoded upright."
+    }
+  ]
 }

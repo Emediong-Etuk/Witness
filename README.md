@@ -1,26 +1,43 @@
 # Witness: camera vitals that show their work
 
-> Work in progress for the Presage SmartSpectra SDK Challenge (`#presagechallenge`). See `docs/BUILD_LOG.md`.
+Witness is a desktop app built on Presage's SmartSpectra SDK. It shows a pulse, breathing rate or HRV value **only when the entire analysis window behind it passed every documented condition**: still, quiet, steady light, one continuous face, enough frames, SDK confident. Every shown number carries an evidence receipt that anyone can recompute. Every withheld number gets a plain reason and a countdown. The rule is enforced in code (`packages/gate`), not in the UI.
 
-**Judge site:** [witness-nine.vercel.app](https://witness-nine.vercel.app). It has a guided tour, the Replay Lab, an in-browser verifier and the flicker tool.
-
-> **A note to the judges: please test the live camera on your own device.**
-> I couldn't complete a live check-in on my own computer. Its webcam gives about 16 fps at a low resolution, and the SmartSpectra SDK stops any session that stays below 25 fps (error 14, `kSustainedLowFrameRate`). The SDK itself (3.5.0) ran on my machine with my key. It stopped for frame rate before the first 12-second pulse window could fill. Witness's camera check now catches this before the SDK starts, and it tried lower resolutions, but this webcam couldn't reach 25 fps at any of them.
->
-> So this submission has **no reading from a real camera yet**, and the held-out numbers below say TBD rather than show numbers I don't have. Most laptop and USB webcams give 25 fps or more in normal light; the app's camera check tells you for free, before any Presage minutes are used. To run it, see [Run it on your device](#run-it-on-your-device).
->
-> Verified without a live camera:
-> - the full app on labelled synthetic replays, in real Electron and in the browser build (UI tests in CI);
-> - the camera check and the hand-off to the SDK, in real Electron with Chromium's simulated camera (a 15 fps feed is held back; a 30 fps feed starts the real SDK on that stream);
-> - the gate, receipts, hash chain and verifier (unit and property tests in CI, and the in-browser verifier on the judge site).
-
-Witness shows a pulse, breathing rate or HRV value only when the **entire** analysis window behind it passed every documented condition: still, quiet, steady light, one continuous face, enough frames, SDK confident. Each shown number comes with an evidence receipt that anyone can recompute.
+**Judge site (no install, no key):** [witness-nine.vercel.app](https://witness-nine.vercel.app) · **Videos:** [demo, 2:48](https://youtu.be/t9cM9Yxl6Xg) · [technical walkthrough, 3:29](https://youtu.be/8R1XOzlivdc) · **Event:** Presage SmartSpectra SDK Challenge on DEV (`#presagechallenge`), Best Thoughtful Real-World Use · **License:** MIT
 
 General wellness information, not medical advice.
 
+## Judges, start here (about 3 minutes, no key)
+
+1. **Do:** open [witness-nine.vercel.app](https://witness-nine.vercel.app) and press **Take the tour**. **See:** a 20-step guided tour of the problem, the gate and the evidence.
+2. **Do:** open the **Replay Lab** and pick `talking`. **See:** breathing withheld while speech is inside its 30-s window, with the reason, and the SDK-only timeline beside it. Then pick `flicker72`. **See:** pulse withheld because the light pulses at a pulse-like rate.
+3. **Do:** open **Verify** and press **Run the verifier**. **See:** the same code as `npm run verify` re-running the gate in your browser.
+4. **Do:** in the **Tamper playground**, pick "Quietly loosen the motion threshold", then **Apply and verify**. **See:** ✗ FAILED, naming the checks that caught it.
+5. **Optional, with your own free SmartSpectra key and a camera that gives 25 fps or more:** [run the app from source](#run-it-on-your-device). A free camera check runs first.
+
+> **A note on live-camera testing.** I couldn't complete a live check-in on my own computer. Its webcam gives about 16 fps at a low resolution, and the SmartSpectra SDK stops any session that stays below 25 fps. SDK 3.5.0 did start with my key, then stopped with error 14 (`kSustainedLowFrameRate`) before the first 12-second pulse window filled ([screenshot](docs/evidence/2026-11-19-first-check-in-error-14.png)). Witness's camera check now catches this before the SDK starts, and it also tries lower resolutions; this webcam couldn't reach 25 fps at any of them. So I recorded two consented 60-second clips of myself on my phone (30 fps) and fed them through the **real SmartSpectra SDK 3.5.0** with `npm run bench:record`. Those traces and their receipts are published (`corpus/traces/`, `corpus/receipts/`). `npm run verify` recomputes every receipt from them, and the Replay Lab opens on them.
+>
+> - **B1, still and quiet:** Witness verified one SDK pulse reading (78 bpm).
+> - **T1, reading aloud from 0:25 to 0:45:** Witness withheld every reading the SDK marked `stable`. Breathing was withheld while speech was inside its window.
+>
+> Two clips are not a held-out result: there's no oximeter reference and the thresholds are uncalibrated, so the held-out numbers below still say TBD. A live check-in from a webcam is still untested by me. Many webcams give 25 fps or more in good light, and the camera check tells you for free. Please try it on yours.
+
+### What is real and what is simulated
+
+| Thing | Status |
+| --- | --- |
+| SmartSpectra integration (renderer SDK, IPC bridge, metrics decoding, validation codes, landmarks, talking, blinking) | **Real code.** The live app path ran against SDK 3.5.0 on the author's machine up to its frame-rate stop. The same decoding produced the real traces below. |
+| Corpus clips B1 and T1 (Replay Lab, `corpus/`) | **Real SmartSpectra output** from two consented phone clips of the author, recorded with `bench record`. The videos stay private (`publishVideo: false`); the traces hold no frames or face coordinates. |
+| Synthetic scenarios (Replay Lab chips, the app's "Try a replay", the UI tests, most of the videos) | **Synthetic**, generated by Witness and labelled `synthetic` everywhere they appear. Not SmartSpectra output. |
+| The gate, receipts, hash chain and verifier | **Real code**, run on both the real and the synthetic traces. Tested in CI. |
+| Camera check | **Real code.** Tested with Chromium's simulated 15 fps and 30 fps cameras. On a 30 fps feed, the real SDK starts on the checked stream. |
+| Held-out results (the numbers below) | **Not yet.** It needs a larger corpus with oximeter readings, then calibrated and frozen thresholds; the results say TBD until then. |
+| Egress audit (what the SDK sends on the wire) | **Tool built, not yet run** (`docs/EGRESS.md`) |
+| Installers | **Not published.** Run from source. |
+
+
 ## The problem
 
-**SmartSpectra turns 12 s of video into a pulse, 30 s into a breathing rate and 60 s into HRV, and its own model cards warn that motion, chewing and flickering light can produce wrong values *with high confidence*. Only motion has one of its 14 warning codes, so an app that trusts `stable` can show a contaminated reading as reliable.**
+**SmartSpectra turns 12 s of video into a pulse, 30 s into a breathing rate and 60 s into HRV, and its own model cards warn that motion, chewing and flickering light can produce wrong values *with high confidence*. Of those three, only motion has a validation code (`EXCESSIVE_MOTION`), so an app that trusts `stable` can show a contaminated reading as reliable.**
 
 On our <!-- bench:clips.length|int -->TBD (run npm run bench:report)<!-- /bench -->-clip held-out corpus, <!-- bench:overall.sdkFalseTrust|ci-pct -->TBD (run npm run bench:report)<!-- /bench --> of readings the SDK marked `stable` had a documented-invalid condition inside their window (<!-- bench:accuracy.pulse.sdkStableContaminated.mae|ci-num1 -->TBD (run npm run bench:report)<!-- /bench --> bpm mean error vs a fingertip oximeter). Witness withheld <!-- bench:overall.witnessWithheldContaminated|ci-pct -->TBD (run npm run bench:report)<!-- /bench --> of those and kept <!-- bench:overall.cleanVerified|ci-pct -->TBD (run npm run bench:report)<!-- /bench --> of the clean ones.
 
@@ -32,9 +49,9 @@ On our <!-- bench:clips.length|int -->TBD (run npm run bench:report)<!-- /bench 
 - `packages/gate`: the Clean-Window Gate (R1–R11), receipts and hash chain ✅ (thresholds **uncalibrated**)
 - `packages/schema`: zod schemas for events, receipts, session logs and the manifest ✅
 - `packages/sdk-adapter`, `packages/session`, `packages/ui`: source adapter, replay, controller, design system ✅
-- `apps/desktop`: Electron shell + renderer + free camera check ✅ (the real SDK runs; no live reading yet, see the note to judges above)
+- `apps/desktop`: Electron shell + renderer + free camera check ✅ (the real SDK runs; no live webcam reading yet, see the note to judges above)
 - `tools/egress-audit`: socket sampler + logging proxy + headless SDK probe ✅ (no real runs yet)
-- `tools/bench`: record / replay / calibrate / report ✅ (no real clips yet; held-out report locked until thresholds are frozen)
+- `tools/bench`: add-clip / record / replay / summary / calibrate / report ✅ (2 real clips recorded; held-out report locked until thresholds are frozen)
 - `tools/verify` (`npm run verify`, `npx witness-verify corpus/`): recomputes every chain, receipt, result and embedded number ✅
 - `tools/lab-recorder` (`npm run lab`): consented corpus recording with scripted cues, flicker page ✅
 - `apps/web`: judge site with an animated guided tour, Replay Lab, in-browser Verify + tamper playground, results, flicker tool ✅ (deploy: `docs/DEPLOY.md`)
@@ -65,5 +82,17 @@ npm run dev -w @witness/desktop
 Then **Quick → Check in → Turn on camera and start**, and sit facing a light. The camera check runs first, uses no credits, and says whether your camera can sustain the SDK's 25 fps floor. On Windows, run these from a normal terminal, not from inside VS Code.
 
 **Replays are synthetic.** The scenarios under "Try a replay" are generated by Witness to drive the UI without a camera or credits. They are not SmartSpectra output, and no result in this repo is computed from them.
+
+## Built with AI assistance
+
+This project was built in November 2026 for this challenge, with Claude Code (Anthropic) as a pair programmer: the commits carry `Co-Authored-By` lines and the session link. The author set the goals and constraints, made the consent and publishing decisions, and approved each change. Numbers are only ever produced by running the code (`npm run verify` fails on a hand-typed one). `docs/BUILD_LOG.md` records what was done, what broke and how it was fixed.
+
+## Docs
+
+- `docs/ARCHITECTURE.md`: packages, data flow, time alignment, gate decisions, security controls, verification
+- `docs/CONSENT_AND_DATA.md`: consent, what is read, stored and sent, with evidence and what is pending
+- `docs/THREAT_MODEL.md`: assets, attackers, controls and residual risks
+- `docs/TEST_REPORT.md`, `docs/EGRESS.md`: generated results (TBD until real runs exist)
+- `docs/VIDEO_SCRIPTS.md`: how the two videos were made
 
 License: MIT (Witness code). The SmartSpectra SDK is proprietary and installed from npm; it isn't redistributed here.

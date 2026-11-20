@@ -1,10 +1,10 @@
 import { join } from 'node:path';
 import { faceBox, median, normaliseBox, roiMeanLuma, roiLayout, type Point, type Rect } from '@witness/features';
 import {
-  LandmarkFeatureTracker, normalizeMetrics, requestedMetrics, type SourceEvent, type TraceHeader, type TraceLine,
+  ErrorCode, LandmarkFeatureTracker, normalizeMetrics, requestedMetrics, Status, type SourceEvent, type TraceHeader, type TraceLine,
 } from '@witness/sdk-adapter';
 import type { ManifestClip } from '@witness/schema';
-import { probe, rgbFrames } from './ffmpeg.js';
+import { feedSize, probe, rgbFrames } from './ffmpeg.js';
 import type { SdkFactory } from './sdk-node.js';
 import { sha256File, writeTrace } from './trace-io.js';
 
@@ -36,6 +36,8 @@ export interface RecordResult {
 }
 
 const BASE_US = 1_000_000;
+const STATUS_NAME: Record<number, string> = Object.fromEntries(Object.entries(Status).map(([k, v]) => [v, k]));
+const ERROR_NAME: Record<number, string> = Object.fromEntries(Object.entries(ErrorCode).map(([k, v]) => [v, k]));
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -51,7 +53,10 @@ export async function recordClip(o: RecordOptions): Promise<RecordResult> {
   const clipSha = sha256File(file);
   if (o.clip.sha256.clip && o.clip.sha256.clip !== clipSha) throw new Error(`${o.clip.id}: clip hash ${clipSha} does not match manifest ${o.clip.sha256.clip}`);
   const pr = probe(file);
-  const { width: W, height: H } = pr;
+  const { width: W, height: H } = feedSize(pr.width, pr.height);
+  const scaled = W !== pr.width || H !== pr.height;
+  if (pr.rotation) log(`${o.clip.id}: stored ${pr.storedWidth}x${pr.storedHeight}, rotation ${pr.rotation}°, decoded upright as ${pr.width}x${pr.height}`);
+  if (scaled) log(`${o.clip.id}: ${pr.width}x${pr.height} scaled to ${W}x${H} for the SDK`);
   const mode = o.mode ?? 'full';
   const h = o.createSdk({ apiKey: o.apiKey, requestedMetrics: requestedMetrics(mode), telemetry: false });
   const { sdk } = h;
@@ -65,8 +70,16 @@ export async function recordClip(o: RecordOptions): Promise<RecordResult> {
   sdk.on('validationStatus', ((code: number, ts: number, hint: string) => rawSdk.push({ kind: 'validation', ts: Number(ts), lastSent, code, hint })) as never);
   sdk.on('metrics', ((buf: Uint8Array, ts: number) => rawSdk.push({ kind: 'metrics', ts: Number(ts), lastSent, buf: Uint8Array.from(buf) })) as never);
   sdk.on('frameSentThrough', ((sent: boolean) => (sent ? framesThrough++ : framesDropped++)) as never);
-  sdk.on('processingStatus', ((status: number) => events.push({ type: 'status', t: Math.max(0, lastSent - BASE_US), status })) as never);
-  sdk.on('error', ((code: number, message: string, retryable: boolean) => errors.push({ code, message: String(message), retryable: !!retryable })) as never);
+  let terminal: { code: number; message: string } | null = null;
+  sdk.on('processingStatus', ((status: number) => {
+    events.push({ type: 'status', t: Math.max(0, lastSent - BASE_US), status });
+    log(`${o.clip.id}: SDK status ${STATUS_NAME[status] ?? status}`);
+  }) as never);
+  sdk.on('error', ((code: number, message: string, retryable: boolean) => {
+    errors.push({ code, message: String(message), retryable: !!retryable });
+    log(`${o.clip.id}: SDK error ${code} (${ERROR_NAME[code] ?? 'unknown'}): ${String(message)}${retryable ? ' [retryable]' : ''}`);
+    if (!terminal) terminal = { code, message: String(message) };
+  }) as never);
 
   // Face box for ROI placement: from the latest landmarks seen so far (decoded on arrival).
   let box: Rect | null = null;
@@ -82,7 +95,9 @@ export async function recordClip(o: RecordOptions): Promise<RecordResult> {
   const pts0 = pr.ptsS[0] ?? 0;
   let prevTs = 0;
   let decoded = 0;
-  for await (const frame of rgbFrames(file, W, H)) {
+  for await (const frame of rgbFrames(file, W, H, scaled)) {
+    // The SDK reported a terminal error: stop feeding (it would only throw "not in a valid state").
+    if (terminal) break;
     const pts = pr.ptsS[k] ?? pts0 + k / 30;
     let ts = BASE_US + Math.round((pts - pts0) * 1e6);
     if (ts <= prevTs) ts = prevTs + 1; // strictly increasing, as the SDK requires
@@ -115,7 +130,15 @@ export async function recordClip(o: RecordOptions): Promise<RecordResult> {
       chest: L.chest ? nullIfNaN(roiMeanLuma(frame, W, H, W * 3, 'RGB', L.chest, step)) : null,
       face: L.face ? nullIfNaN(roiMeanLuma(frame, W, H, W * 3, 'RGB', L.face, step)) : null,
     });
-    const ok = sdk.sendFrame(frame, W, H, W * 3, h.pixelFormatRGB, ts);
+    let ok = false;
+    try {
+      ok = sdk.sendFrame(frame, W, H, W * 3, h.pixelFormatRGB, ts);
+    } catch (e) {
+      // Usually a consequence of an earlier SDK error; give its callback a moment to arrive.
+      await sleep(200);
+      if (!terminal) terminal = { code: -1, message: (e as Error).message };
+      break;
+    }
     if (!ok) rejected++;
     sent.add(ts);
     lastSent = ts;
@@ -123,8 +146,17 @@ export async function recordClip(o: RecordOptions): Promise<RecordResult> {
     if (k % 300 === 0) log(`${o.clip.id}: ${k}/${pr.ptsS.length} frames`);
   }
   await sleep(o.settleMs ?? 2500);
-  await sdk.stopAsync();
+  await sdk.stopAsync().catch(() => undefined);
   await sdk.destroy();
+  if (terminal) {
+    const t = terminal as { code: number; message: string };
+    const first = errors[0];
+    throw new Error(
+      `${o.clip.id}: SmartSpectra stopped after ${k} of ${pr.ptsS.length} frames. ` +
+        (first ? `First SDK error: ${first.code} (${ERROR_NAME[first.code] ?? 'unknown'}): ${first.message}. ` : `sendFrame threw: ${t.message}. `) +
+        'No trace was written.',
+    );
+  }
   const wallS = (now() - wall0) / 1000;
 
   // Timestamp domain: do SDK timestamps equal the ones we passed in?
@@ -165,6 +197,7 @@ export async function recordClip(o: RecordOptions): Promise<RecordResult> {
     clipSha256: clipSha,
     width: W,
     height: H,
+    rotation: pr.rotation,
     frames: pr.ptsS.length,
     framesSent: k,
     sendRejected: rejected,

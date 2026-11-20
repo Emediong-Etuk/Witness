@@ -1,0 +1,8 @@
+# Keep LF everywhere so hashes and generated text compare the same on every OS.
+* text=auto eol=lf
+# Hash-chained evidence is byte-exact: never convert line endings.
+*.jsonl -text
+corpus/receipts/** -text
+corpus/traces/** -text
+*.png binary
+*.mp4 binary

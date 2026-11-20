@@ -30,7 +30,11 @@ test('every route renders by deep link, with no errors and no third-party reques
 test('no invented numbers: headline values are TBD until results exist', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-tour="measured"] .tbd')).toHaveCount(4);
-  await expect(page.getByTestId('video-pitch')).toContainText('Publishing');
+  await expect(page.getByTestId('video-pitch')).toContainText('Plays from youtube-nocookie.com');
+  // nothing loads from YouTube until play is pressed, and then only the privacy-enhanced domain
+  expect(await page.locator('iframe').count()).toBe(0);
+  await page.getByTestId('video-pitch').getByRole('button', { name: /Play/ }).click();
+  await expect(page.locator('iframe[src^="https://www.youtube-nocookie.com/embed/t9cM9Yxl6Xg"]')).toHaveCount(1);
 });
 
 test('guided tour walks every step across pages, then finishes', async ({ page }) => {
@@ -89,10 +93,22 @@ test('Replay Lab: talking scenario shows SDK-stable readings withheld, and a rec
   await expect(page.getByTestId('replay-play')).toContainText('Pause');
 });
 
+test('Replay Lab opens on a real SDK recording, labelled as such, with the talking band', async ({ page }) => {
+  await page.goto('/replay');
+  await expect(page.getByTestId('replay-corpus-T1')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByText('real SDK output')).toBeVisible();
+  // breathing readings inside/after the talking interval are withheld with the "quiet" rule
+  const withheld = page.locator('[data-testid="dot-breathing-WITHHELD"]');
+  expect(await withheld.count()).toBeGreaterThan(3);
+  await page.getByTestId('replay-corpus-B1').click();
+  expect(await page.locator('[data-testid="dot-pulse-VERIFIED"]').count()).toBeGreaterThan(0);
+});
+
 test('Verify: published corpus passes in the browser', async ({ page }) => {
   await page.goto('/verify');
   await page.getByTestId('verify-run').click();
   await expect(page.getByTestId('verify-summary')).toContainText('OK', { timeout: 60_000 });
+  await expect(page.getByTestId('verify-summary')).toContainText('2 traces');
 });
 
 test('Verify: tampering with a README number is caught and listed first', async ({ page }) => {

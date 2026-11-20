@@ -6,9 +6,10 @@ export interface Point {
 }
 
 /**
- * MediaPipe face-mesh indices (478-point topology incl. irises).
- * TODO(verify): confirm against the landmark numbering reference linked from
- * the SmartSpectra model cards before calibration.
+ * MediaPipe Face Mesh indices (478-point topology including irises).
+ * Assumption, stated rather than verified: the SDK's landmark stream uses this
+ * numbering. It is not yet checked against a real SDK trace; the features that
+ * use these points fail closed if the landmarks are missing.
  */
 export const LM = {
   rightEyeOuter: 33,

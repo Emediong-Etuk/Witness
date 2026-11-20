@@ -315,3 +315,44 @@ So recorder output feeds straight into the bench.
   - The note also lists what was verified without a live camera: synthetic replays in real Electron and in the browser build; the camera check and SDK hand-off with Chromium's simulated camera; the gate, receipts and verifier in CI.
 - Also corrected on the Run page: option B pointed to GitHub Releases, but packaging was never done, so there are no installers. `SITE.releasesUrl` is now `null`, and the card says installers aren't published and points to option C. The README's run section now has the full from-source steps, the 25 fps requirement and the Windows notes.
 - The "Start with the videos" tour step no longer promises "live SmartSpectra signals" in the demo.
+
+### Pre-submission judging and fixes (2026-11-20)
+- Ran a strict hackathon-judge pass. It scored **66/100**, "not ready". The blockers:
+  - **No live SDK signal anywhere.** All readings on screen come from synthetic replays, and `corpus/traces/` is empty.
+  - **Placeholder video IDs** in the DEV post and on the site.
+  - **Contradicted claims:** the Releases link on the live site, the walkthrough length, and the "14 warning codes" count.
+- **Fixed now:**
+  - **README first screen rewritten:**
+    - what it is and the one rule, plus the judge site link;
+    - "Judges, start here" do/see steps, which need no key;
+    - the testing note, now with evidence (`docs/evidence/2026-11-19-first-check-in-error-14.png`);
+    - a real-vs-simulated table;
+    - an AI-assistance statement and a docs index.
+  - **"14 warning codes" reworded.** The SDK's `.d.ts` lists 15 non-OK validation codes, including CAMERA_TUNING, so the count depends on definitions. Every place now says "of those three conditions, only motion has a validation code (EXCESSIVE_MOTION)".
+  - **"Most webcams give 25 fps" → "many … in good light".** It wasn't measured.
+  - **Video lengths now match the files:** pitch 2:22, walkthrough 3:20 (the site config, the DEV post, the CTA and the tour).
+  - **`TODO(verify)` on the landmark indices** replaced with a stated, unverified assumption.
+- **New: `npm run bench:add-clip`.** It registers a clip recorded elsewhere (e.g. a phone) in the manifest. It's offline: it probes the file, refuses anything below 25 fps, without `--i-consent`, duplicate IDs, or labels past the end of the clip, then hashes the file and writes a schema-valid entry. 5 tests, including real ffmpeg-made 30 fps and 15 fps clips. This is the route to a real SDK trace when no webcam reaches 25 fps.
+- **First real `bench:record` (Greg's PC, phone clips B1/T1, 1920×1080):** it failed with "SmartSpectra is not in a valid state for this operation", preceded by `Usage verification failed. Status code: 0`.
+  - **Reproduced here** with the real SDK 3.5.0 and a dummy key, Presage unreachable: the usage check fails with status 0, then the SDK raises error 5 (`kNetworkError`) and goes to the error state.
+  - **Why the message was misleading:** `bench:record` stored SDK errors silently and kept calling `sendFrame`, which then threw the generic "not in a valid state" message.
+  - **Fixed:**
+    - every SDK error and status change is now logged as it happens, with its name;
+    - feeding stops at the first terminal error with a summary ("stopped after N of M frames. First SDK error: 5 (networkError): …. No trace was written.");
+    - clips wider than 1280 px are scaled to 1280-wide before feeding (the SDK's pipeline is tuned for 720p);
+    - `WITNESS_SDK_VERBOSE=1` raises the SDK log level to info.
+  - Two new stub tests, plus the real-SDK reproduction above. On Greg's side, the open question is why the SDK couldn't reach Presage from `node` on his PC (network, VPN, or antivirus HTTPS scanning).
+- **Second real run (Greg's PC): the SDK processed both clips**, the first real SmartSpectra traces in the project. B1 has 3,664 trace lines and T1 has 3,628, both chained, pinned and schema-clean. Two problems showed up:
+  - **0 receipts.** The gate produced no readings. Likely cause, reproduced here: phone videos are stored sideways with a rotation flag. `ffprobe` reported the stored 1920×1080 while `ffmpeg` decoded upright 1080×1920 frames: the same byte count, so nothing failed, but every frame was read with the wrong width. That means scrambled pixels, no face, and no readings.
+    - **Fix:** `probe` now applies the rotation (side-data `rotation` or the `rotate` tag) and reports the decoded size, and `feedSize` caps the long side at 1280.
+    - **Test:** a clip flagged with a 90° rotation must reach the SDK stub as 360×640.
+    - **New `bench:summary`:** an offline inspection tool that counts readings and validation codes in a trace, to confirm this on Greg's traces before spending credits on a re-run.
+  - **`docs.EGRESS.md` ✗ on Windows:** the CRLF checkout didn't match the LF-generated table. The verifier now normalises line endings. `.gitattributes` forces LF and marks traces and receipts `-text`, so their bytes (and hashes) never change on checkout.
+- **Third real run: the first real readings.** Re-recorded B1/T1 after the rotation fix. Each clip is 720×1280 upright, with 0 SDK errors and about 96% `ok` validation frames. `npm run verify`: 2 traces, all 45 receipts recomputed and matched. From `corpus/receipts/`, with no ground truth and uncalibrated thresholds:
+  - **B1 (still and quiet):** 16 readings, 2 pulse and 14 breathing. **One pulse VERIFIED (77.7 bpm at 53.5 s).** The other SDK-stable pulse, at 50.4 s, was withheld by R9 alone.
+  - **T1 (talking 25–45 s):** 29 readings, 10 marked `stable` by the SDK, and Witness withheld all 10.
+    - Breathing was withheld with R7 ("You spoke") from 23 s onwards.
+    - After the talking, the SDK's pulse fell from 72–80 to 49–58 bpm. The readings at 56.9 s (53.9 bpm) and 59.2 s (57.7 bpm) were still `stable`, and Witness withheld them for R4 (non-OK validation codes) and R6 (motion).
+  - **R9 (steady light) fires on the clean clip too.** Its placeholder threshold is too strict for phone video (auto-exposure). This is a calibration problem, and two clips aren't enough to calibrate (`minCleanReadings` is 30).
+  - **Site and docs updated:** the Replay Lab opens on the real traces, labelled "real SDK output". The README, `TestingNote`, the tour, the DEV post and `CONSENT_AND_DATA` now say real SDK output exists from phone clips, while a live webcam check-in and held-out results don't.
+- **Videos published** on YouTube: demo https://youtu.be/t9cM9Yxl6Xg (2:48), walkthrough https://youtu.be/8R1XOzlivdc (3:29). The IDs are in `site.config.ts` (the site embeds them from youtube-nocookie.com, and only after the user presses play; e2e checks both), in the DEV post (`{% youtube %}` embed + link) and in the README links row. The last placeholders are gone.

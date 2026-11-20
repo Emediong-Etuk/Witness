@@ -6,7 +6,7 @@ export const SITE = {
   releasesUrl: null as string | null,
   devPostUrl: null as string | null,
   videos: {
-    pitch: { title: 'The 3-minute demo', youtubeId: null as string | null, length: '≤ 3:00' },
-    walkthrough: { title: 'Technical walkthrough', youtubeId: null as string | null, length: '≈ 4–5 min' },
+    pitch: { title: 'The demo', youtubeId: 't9cM9Yxl6Xg' as string | null, length: '2:48' },
+    walkthrough: { title: 'Technical walkthrough', youtubeId: '8R1XOzlivdc' as string | null, length: '3:29' },
   },
 };
