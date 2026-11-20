@@ -382,3 +382,10 @@ So recorder output feeds straight into the bench.
   - The first tag had been pushed on the PR #9 merge, before the macOS runner fix. That run was cancelled and published nothing, so the tag was moved to the PR #10 merge.
   - The site's Run page, the README, the judges' note and the DEV post now point to the latest release.
 - **DEV post published:** https://dev.to/emediongrgb/witness-camera-vitals-that-show-their-work-1b73. It's linked from the site footer, the Run page and the README links row.
+- **Windows installer checked on a real PC** (Greg's, 2026-11-20). The flow worked end to end:
+  - `Witness-Setup-0.1.0-win-x64.exe` from the v0.1.0 release ran after SmartScreen → More info → Run anyway, as expected for an unsigned build;
+  - the packaged app opened styled;
+  - it took the key and showed the consent card;
+  - it turned on the camera with a live preview, and the camera check tried all three resolutions;
+  - it stopped before the SDK with "This camera is giving 14 fps; SmartSpectra needs 25 or more", plus the lower-resolutions note. No Presage minutes were used.
+  - The screenshot shows the author's face, so it's kept out of the repo.
