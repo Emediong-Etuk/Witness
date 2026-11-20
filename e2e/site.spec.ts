@@ -89,10 +89,22 @@ test('Replay Lab: talking scenario shows SDK-stable readings withheld, and a rec
   await expect(page.getByTestId('replay-play')).toContainText('Pause');
 });
 
+test('Replay Lab opens on a real SDK recording, labelled as such, with the talking band', async ({ page }) => {
+  await page.goto('/replay');
+  await expect(page.getByTestId('replay-corpus-T1')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByText('real SDK output')).toBeVisible();
+  // breathing readings inside/after the talking interval are withheld with the "quiet" rule
+  const withheld = page.locator('[data-testid="dot-breathing-WITHHELD"]');
+  expect(await withheld.count()).toBeGreaterThan(3);
+  await page.getByTestId('replay-corpus-B1').click();
+  expect(await page.locator('[data-testid="dot-pulse-VERIFIED"]').count()).toBeGreaterThan(0);
+});
+
 test('Verify: published corpus passes in the browser', async ({ page }) => {
   await page.goto('/verify');
   await page.getByTestId('verify-run').click();
   await expect(page.getByTestId('verify-summary')).toContainText('OK', { timeout: 60_000 });
+  await expect(page.getByTestId('verify-summary')).toContainText('2 traces');
 });
 
 test('Verify: tampering with a README number is caught and listed first', async ({ page }) => {
