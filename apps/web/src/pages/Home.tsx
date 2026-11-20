@@ -55,7 +55,7 @@ export function Home() {
           </Reveal>
           <Reveal delay={0.24}>
             <div className="mt-7 flex flex-wrap gap-3">
-              <a href="#videos" className="btn btn-primary" data-testid="cta-watch">▶ Watch the 2-minute demo</a>
+              <a href="#videos" className="btn btn-primary" data-testid="cta-watch">▶ Watch the demo (2:48)</a>
               <Link to="/verify" className="btn" data-testid="cta-verify">Verify our results in your browser →</Link>
             </div>
           </Reveal>
