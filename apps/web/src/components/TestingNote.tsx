@@ -38,7 +38,7 @@ export function TestingNote({ compact = false }: { compact?: boolean }) {
         </>
       ) : null}
       <p className="mt-4 text-sm">
-        {compact ? 'To test: option C below' : <>To test: <Link to="/run" className="underline">Run it</Link>, option C</>} (from source, with a free SmartSpectra key). Then Quick → Check in, and sit facing a light.
+        {compact ? 'To test: option B below' : <>To test: <Link to="/run" className="underline">Run it</Link>, option B</>} (download the installer for Windows, macOS or Linux, and use a free SmartSpectra key). Then Quick → Check in, and sit facing a light.
       </p>
     </aside>
   );

@@ -104,6 +104,12 @@ test('Replay Lab opens on a real SDK recording, labelled as such, with the talki
   expect(await page.locator('[data-testid="dot-pulse-VERIFIED"]').count()).toBeGreaterThan(0);
 });
 
+test('Run page links the installers', async ({ page }) => {
+  await page.goto('/run');
+  await expect(page.getByTestId('download')).toHaveAttribute('href', 'https://github.com/Emediong-Etuk/Witness/releases/latest');
+  await expect(page.getByTestId('no-installers')).toHaveCount(0);
+});
+
 test('Verify: published corpus passes in the browser', async ({ page }) => {
   await page.goto('/verify');
   await page.getByTestId('verify-run').click();
