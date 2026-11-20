@@ -4,7 +4,7 @@ published: false
 tags: presagechallenge, devchallenge, electron, typescript
 ---
 
-*This is a submission for the [Presage SmartSpectra SDK Challenge](https://dev.to/challenges/presage).*
+*This is a submission for the [Presage SmartSpectra SDK Challenge](https://dev.to/challenges/presage-2026-11-04).*
 
 ## What I Built
 
