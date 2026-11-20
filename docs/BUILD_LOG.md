@@ -374,3 +374,10 @@ So recorder output feeds straight into the bench.
   - Each build asserts that the bundled runtime exists.
   - On a `v*` tag it publishes a GitHub Release with SHA256SUMS and install notes for unsigned builds. On PRs touching packaging it only builds artifacts.
   - All builds are unsigned (no certificates); the notes explain SmartScreen and Gatekeeper.
+- **Released v0.1.0** (https://github.com/Emediong-Etuk/Witness/releases/tag/v0.1.0). The `release` workflow built it from tag `v0.1.0` at `f4aef73`:
+  - `Witness-Setup-0.1.0-win-x64.exe` (163 MB);
+  - `Witness-0.1.0-mac-arm64.dmg` (166 MB);
+  - `Witness-0.1.0-linux-x86_64.AppImage` (181 MB);
+  - `SHA256SUMS`.
+  - The first tag had been pushed on the PR #9 merge, before the macOS runner fix. That run was cancelled and published nothing, so the tag was moved to the PR #10 merge.
+  - The site's Run page, the README, the judges' note and the DEV post now point to the latest release.
